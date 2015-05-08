@@ -32,8 +32,12 @@ int main(int argc, char **argv) {
 	float *M;
 	char *vocab;
 
+	if(argc < 2) {
+		fprintf(stderr, "[Usage] %s <bin_file> \n", argv[0]);
+		return 1;
+	}
 
-	strcpy(file_name, "/Users/kimchanghwan/Documents/koreanWord2vec/svn/output.bin");
+	strcpy(file_name, argv[1]);
 	f = fopen(file_name, "rb");
 	if (f == NULL) {
 		printf("Input file not found\n");

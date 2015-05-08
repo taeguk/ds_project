@@ -78,7 +78,8 @@ void ReadWord(char *word, FILE *fin) {
 				if (ch == '\n') ungetc(ch, fin);
 				break;
 			}
-			if (ch == '\n') {
+			// when a=0
+			if (ch == '\n') {	
 				strcpy(word, (char *)"</s>");
 				return;
 			} else continue;
@@ -109,6 +110,7 @@ int SearchVocab(char *word) {
 	return -1;
 }
 
+// bug?? word exists and feof -> bug?? ************
 // Reads a word and returns its index in the vocabulary
 int ReadWordIndex(FILE *fin) {
 	char word[MAX_STRING];
@@ -136,6 +138,8 @@ int AddWordToVocab(char *word) {
 	return vocab_size - 1;
 }
 
+//		-		 0		+
+// a is bigger same b is bigger
 // Used later for sorting by word counts
 int VocabCompare(const void *a, const void *b) {
 	return ((struct vocab_word *)b)->cn - ((struct vocab_word *)a)->cn;
@@ -189,7 +193,7 @@ void ReduceVocab() {
 		vocab_hash[hash] = a;
 	}
 	fflush(stdout);
-	min_reduce++;
+	min_reduce++;	// note!
 }
 
 // Create binary Huffman tree using the word counts
@@ -234,7 +238,7 @@ void CreateBinaryTree() {
 		count[vocab_size + a] = count[min1i] + count[min2i];
 		parent_node[min1i] = vocab_size + a;
 		parent_node[min2i] = vocab_size + a;
-		binary[min2i] = 1;
+		binary[min2i] = 1;		// 0 : left , 1 : right
 	}
 	// Now assign binary code to each vocabulary word
 	for (a = 0; a < vocab_size; a++) {
@@ -251,13 +255,15 @@ void CreateBinaryTree() {
 		vocab[a].point[0] = vocab_size - 2;
 		for (b = 0; b < i; b++) {
 			vocab[a].code[i - b - 1] = code[b];
-			vocab[a].point[i - b] = point[b] - vocab_size;
+			vocab[a].point[i - b] = point[b] - vocab_size;		// store route
 		}
 	}
 	free(count);
 	free(binary);
 	free(parent_node);
 }
+
+/****	Analyzing Finish To This Line	****/
 
 void LearnVocabFromTrainFile() {
 	char word[MAX_STRING];
@@ -273,6 +279,7 @@ void LearnVocabFromTrainFile() {
 	AddWordToVocab((char *)"</s>");
 	while (1) {
 		ReadWord(word, fin);
+		printf("WORD #%d = %s \n", train_words+1, word);
 		if (feof(fin)) break;
 		train_words++;
 		if ((debug_mode > 1) && (train_words % 100000 == 0)) {
@@ -627,14 +634,19 @@ int ArgPos(char *str, int argc, char **argv) {
 int main(int argc, char **argv) {
 	int i;
 
+	if(argc < 3) {
+		fprintf(stderr, "[Usage] %s <train_file> <output_file> \n", argv[0]);
+		return 1;
+	}
+
 	output_file[0] = 0;
 	save_vocab_file[0] = 0;
 	read_vocab_file[0] = 0;
 	layer1_size = 300;
-	strcpy(train_file, "/Users/kimchanghwan/Documents/koreanWord2vec/svn/data.txt");
+	strcpy(train_file, argv[1]);
 
 	alpha = 0.01f;
-	strcpy(output_file, "/Users/kimchanghwan/Documents/koreanWord2vec/svn/output.bin");
+	strcpy(output_file, argv[2]);
 	window = 5;
 	sample = 0;
 	hs = 1;

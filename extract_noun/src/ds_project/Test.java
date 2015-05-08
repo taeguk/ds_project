@@ -14,12 +14,12 @@ public class Test {
 		final String fileName = "text.txt";
 		String content = new Scanner(new File(fileName)).useDelimiter("\\Z").next();
 		
-		Komoran komoran = new Komoran("C:\\Users\\R912COM\\workspace\\ds_project\\models-full");
+		Komoran komoran = new Komoran("models-full");
 		List<List<Pair<String,String>>> result = komoran.analyze(content);
 		for (List<Pair<String, String>> eojeolResult : result) {
 			for (Pair<String, String> wordMorph : eojeolResult) {
 				if ( wordMorph.getSecond().equals("NNP") || wordMorph.getSecond().equals("NNG") )
-					System.out.println(wordMorph);
+					System.out.print(wordMorph.getFirst() + " ");
 			}
 		}
 	}
