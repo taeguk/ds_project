@@ -13,5 +13,4 @@ soup = BeautifulSoup(source, "html.parser")
 
 #print source
 
-print soup.find('div', {'id' : 'articleBodyContents'}).contents
-
+print soup.find('div', {'id' : 'articleBodyContents'})
