@@ -242,6 +242,8 @@ bool check_axis(WordIdx wordIdx);
  * Description		:
  *		none
  */
+// 이 함수에서 할 일이 더 많을듯.
+// wordStr바탕으로 해쉬값구한뒤 해쉬콜리전을 고려해야함으로 strcmp()로 단어문자열이랑 계속 비교하면서 맞는거 나올때까지 탐색해야함.
 inline WordIdx get_wordIdx(const char *wordStr);
 
 /*

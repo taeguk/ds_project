@@ -22,5 +22,6 @@ public class Test {
 					System.out.print(wordMorph.getFirst() + " ");
 			}
 		}
+		System.out.println("");
 	}
 }
