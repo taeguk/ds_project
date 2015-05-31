@@ -3,35 +3,43 @@
 
 #include <stdbool.h>
 
+#define MAX_WORD_SIZE	100
+
 #define MAX_HASH_SIZE	(MAX_WORD_NUM * 20)
 #define MAX_WORD_NUM	500000
-#define AXIS_NUM		200
+#define AXIS_NUM		200		// real axis num is 200. axis[0] = junk.
 
 #define RELATION_QUEUE_SIZE (10 * 2 + 1)
 
-typedef	int WordCnt;
-typedef int WordVec;
-typedef int HashIdx;
-typedef int WordIdx;
-typedef int AxisIdx;
+typedef	unsigned int WordCnt;
+typedef unsigned int WordVec;
+typedef unsigned int HashIdx;
+typedef unsigned int WordIdx;
+typedef unsigned int AxisIdx;
 
-typedef char SepType; //separator type
+//typedef char SepType; //separator type
+typedef enum {
+	NOT_SEP = 0,
+	SEP_EOF,
+	SEP_TEXT,
+	SEP_OVER,
+} SepType;
 
 /*
  * ---  struct description  ---
  *	Struct for storing word's information
  * --- elements description ---
  * 1. wordStr
- *		- string of the word 
+ *		- string of the word
  * 2. wordCnt
  *		- wordCnt shows that the number of the word appeared times in whole input text.
  * 3. wordVec
  *		- relation between the word and axis words. If there is no relation between word and axis, the value of wordVec[axisIdx] is 0.
  */
 typedef struct _Word {
-	const char *wordStr;
+	char wordStr[MAX_WORD_SIZE];
 	WordCnt wordCnt;
-	WordVec wordVec[AXIS_NUM];
+	WordVec wordVec[AXIS_NUM+1];	// wordVec[0] is junk.
 } Word;
 
 /*
@@ -39,23 +47,35 @@ typedef struct _Word {
  *	Struct for managing words
  * --- elements description ---
  * 1. word
- *		- word array
+ *		- word 
+ *		- word[0] is junk
  * 2. wordNum
  *		- the number of words
+ *		- include junk word(word[0]).
+ *		- real wordNum = wordNum - 1
  * 3. wordIdxTable
- *		- the value is -1 if index hash is not registered.
+ *		- the value is 0 if index hash is not registered.
  *		- wordIdx if it's registerd.
  *		- wordIdxTable[hashIdx] : wordIdx
  * 4. axisIdxTable
- *		- the value is -1 if index word is not an axis,
+ *		- the value is 0 if index word is not an axis,
  *		- axisIdx if it's an axis.
  *		- axisIdxTable[wordIdx] : axisIdx
  */
+
+/*
 typedef struct _WordManager {
-	Word word[MAX_WORD_NUM];
+	Word word[MAX_WORD_NUM];		// word[0] is junk.
 	int wordNum;
 	WordIdx wordIdxTable[MAX_HASH_SIZE];
-	AxisIdx axisIdxTable[MAX_WORD_NUM];
+	AxisIdx axisIdxTable[MAX_WORD_NUM];		// axisIdxTable[0] is junk.
+} WordManager;
+*/
+typedef struct _WordManager {
+	Word *word;		// word[0] is junk.
+	int wordNum;
+	WordIdx *wordIdxTable;
+	AxisIdx *axisIdxTable;		// axisIdxTable[0] is junk.
 } WordManager;
 
 /*
@@ -105,7 +125,7 @@ HashIdx hash_word(const char* wordStr);
 /*
  * Function Name	: check_word_existence
  * Parameter		: wordManager, a pointer of the word string
- * Return value		: true if exist, false if not exist
+ * Return value		: 0 if exist, hashIdx which will inserted if not exist
  * Role				: 
  *		1. get hashIdx of the word using hash_word.
  *			- hash(word) = hashIdx
@@ -115,7 +135,7 @@ HashIdx hash_word(const char* wordStr);
  * Description		:
  *		none
  */
-inline bool check_word_existence(const WordManager* wordManager, const char* wordStr);
+HashIdx check_word_existence(const WordManager* wordManager, const char* wordStr);
 
 /*
  * Function Name	: register_word
@@ -218,17 +238,18 @@ void insert_word_to_rqueue(WordIdx *rqueue, WordIdx wordIdx, int *pIdx);
 void read_word_from_file(FILE *fp, char *wordStr);
 
 /*
- * Function Name	: check_axis
+ * Function Name	: get_axisIdx
  * Parameter		: wordIdx
- * Return value		: true if word is axis, false if not
+ * Return value		: axisIdx
  * Role				: 
  *		1. check parameter wordIdx is an axis or not.
+ *		2. return axisIdx.
  * Using function	:
  *		1. 
  * Description		:
  *		none
  */
-bool check_axis(WordIdx wordIdx);
+AxisIdx get_axisIdx(WordIdx wordIdx);
 
 /*
  * Function Name	: get_wordIdx
@@ -325,6 +346,7 @@ SepType get_separator_type(char *wordStr);
  */
 void process_separator(WordIdx *rqueue, int *pIdx, SepType sepType);
 
+HashIdx collision_hash(HashIdx hashIdx, const char* WordStr);
 
 /*
  * Function Name	: export_result
