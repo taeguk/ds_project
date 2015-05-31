@@ -20,6 +20,7 @@
 void init_analysis(WordManager* wordManager)
 {
 	FILE * fp = fopen(FILE_NAME, "r");
+	int i;
 
 	//wordManager->word[0] <- junk
 	wordManager->wordNum = 1;
@@ -39,11 +40,76 @@ void init_analysis(WordManager* wordManager)
 	fclose(fp);
 
 	// create axisIdxTable.
-	//get_axisList(wordManager->word+1, wordManager->wordNum-1, wordManager->axisIdxTable+1);
-	WordManager tmp = {wordManager->word+1, wordManager->wordNum-1, wordManager->axisIdxTable+1};
-	get_axisIdxTable(&tmp);
-}
+	if(wordManager->wordNum <= 3000) {
+		WordManager test = {wordManager->word, wordManager->wordNum, wordManager->wordIdxTable, 0};
+		test.axisIdxTable = (AxisIdx*) calloc(test.wordNum, sizeof(AxisIdx));
+		for(i=1; i<test.wordNum; ++i) {
+			test.axisIdxTable[i] = i;
+		}
+	} else {
+		WordManager test;
+		test.word = (Word*) calloc(3000+1, sizeof(Word));
+		test.wordNum = 1;//test.wordNum = 3000+1;
+		test.wordIdxTable = (WordIdx*) calloc(MAX_HASH_SIZE, sizeof(WordIdx));
+		test.axisIdxTable = (AxisIdx*) calloc(3000+1, sizeof(AxisIdx));
 
+		//HashIdx hash[3000+1];
+		for(i=0; test.wordNum < 3000+1; ++i) {
+			int wordIdx;
+			if(wordIdx = wordManager->wordIdxTable[i]) {
+				//test.axisIdxTable[test.wordNum] = test.wordNum;
+				HashIdx hashIdx = check_word_existence(&test, wordManager->word[wordIdx].wordStr);
+				//hash[test.wordNum] = hashIdx;
+				test.wordIdxTable[hashIdx] = test.wordNum;
+				test.word[test.wordNum] = wordManager->word[wordIdx];
+				++test.wordNum;
+			}
+		}
+
+		// sort
+		for(i=1; i<3000+1; ++i) {
+			Word word = test.word[i];
+			for(j=i-1; j>=1 && test.word[j].wordCnt > word.wordCnt; --j)
+				test.word[j+1] = test.word[j];
+			test.word[j+1] = word;
+		}
+
+		//select 1000
+		Word *newWord = (Word*) calloc(1000+1, sizeof(Word));
+		memset(test.wordIdxTable, 0, sizeof(WordIdx) * MAX_HASH_SIZE);
+		for(i=1,j=(3000*0.99); i<1000+1; ++i,--j) {
+			newWord[i] = test.word[j];
+			HashIdx hashIdx = check_word_existence(&test, wordManager->word[wordIdx].wordStr);
+			test.wordIdxTable[hashIdx] = i;
+			test.axisIdxTable[i] = i;
+		}
+		test.wordNum = 1000+1;
+
+		calculate_vector(test);
+		
+		double rate[1000+1];
+		for(i=1; i<1000+1; ++i) {
+			rate[i] = 0;
+			for(j=1; j<1000+1; ++j) {
+				rate[i] += test.word[i].wordVec[j];
+			}
+			rate[i] = test.word[i].wordVec[i] / rate[i];
+		}
+
+		// sort rate. and get high 200rank i.
+		// high 200 rank is axis.
+	}
+
+//	calculate_vector(test);
+
+
+
+	
+	//get_axisList(wordManager->word+1, wordManager->wordNum-1, wordManager->axisIdxTable+1);
+	//WordManager tmp = {wordManager->word+1, wordManager->wordNum-1, wordManager->axisIdxTable+1};
+	//get_axisIdxTable(&tmp);
+}
+/*
 //void get_axisList(const Word *words, int wordNum, AxisIdx *axisCheck)
 void get_axisIdxTable(WordManager* wordManager)
 {
@@ -70,7 +136,7 @@ void get_axisIdxTable(WordManager* wordManager)
 	// merge result
 	
 }
-
+*/
 /*
  * Function Name	: register_word
  * Parameter		: wordManager, a pointer of the word string
