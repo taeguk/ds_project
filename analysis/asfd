@@ -26,7 +26,7 @@ void init_analysis(WordManager* wordManager)
 
 	// get words' wordCnt and create wordIdxTable.
 	while(1) {
-		Word* curWord = &word[wordManager->wordNum];
+		Word* curWord = &word[WordManager->wordNum];
 		read_word_from_file(fp, curWord->word);
 
 		if(!check_separator(curWord->word)) {
@@ -39,36 +39,24 @@ void init_analysis(WordManager* wordManager)
 	fclose(fp);
 
 	// create axisIdxTable.
-	//get_axisList(wordManager->word+1, wordManager->wordNum-1, wordManager->axisIdxTable+1);
-	WordManager tmp = {wordManager->word+1, wordManager->wordNum-1, wordManager->axisIdxTable+1};
-	get_axisIdxTable(&tmp);
+	
 }
 
-//void get_axisList(const Word *words, int wordNum, AxisIdx *axisCheck)
-void get_axisIdxTable(WordManager* wordManager)
+void get_axisList(const Word *words, int wordNum, AxisIdx *axisCheck, int *axisNum)
 {
 	int i;
 
-	// recursive exit condition
-	if(wordManager->wordNum <= AXIS_NUM) {
-		for(i=0; i<wordManager->wordNum; ++i) {
-			wordManager->axisIdxTable = 1;
+	if(wordNum <= AXIS_NUM) {
+		for(i=0; i<wordNum; ++i) {
+			axisCheck[i] = 1;
 		}
 		*axisNum = wordNum;
 		return;
 	}
 
-	static const int SPLIT_NUM = 10;
-	int offset = wordNum / SPLIT_NUM;
-
-	// divide problem
-	for(i=0; i<SPLIT_NUM-1; ++i) {
-		get_axisList(words+i*offset, offset, axisCheck+i*offset, axisNum);
+	for(i=0; i<10; ++i) {
+		get_ax
 	}
-	get_axisList(words+i*offset, wordNum - (offset*(SPLIT_NUM-1)), axisCheck+i*offset, axisNum);
-
-	// merge result
-	
 }
 
 /*
