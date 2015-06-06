@@ -1,13 +1,12 @@
 #ifndef __ANALYSIS_H__
 #define __ANALYSIS_H__
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 #include <stdbool.h>
 
-#define SAMPLE_NUM		3000
-//#define MIN_SAMPLE_WORD_CNT		100
-
 #define SIMULATION_NUM	1000
-//#define FILTER_RATE		0.80
 
 #define MAX_WORD_SIZE	100
 
@@ -28,7 +27,7 @@ typedef enum {
 	NOT_SEP = 0,
 	SEP_EOF,
 	SEP_TEXT,
-	SEP_OVER,
+	SEP_OVER
 } SepType;
 
 /*
@@ -102,7 +101,7 @@ void* realloc_wrap(void* ptr, size_t size);
  * Role				: 
  *		1. free word manager deeply.
  */
-void free_wordManager(WordManager *wordManager)
+void free_wordManager(WordManager *wordManager);
 
 /*
  * Function Name	: init_analysis
@@ -115,11 +114,11 @@ void free_wordManager(WordManager *wordManager)
  *		3. create axisIdxTable.
  *			- select proper axis words
  */
-WordManager* init_analysis(const char* filename)
+WordManager* init_analysis(const char* filename);
 
 /*
  * Function Name	: create_axisIdxTable 
- * Parameter		: a pointer of word manager
+ * Parameter		: a pointer of word manager, a pointer of input file name string
  * Return value		: void
  * Role				: 
  *		1. select sample words randomly in word manager
@@ -128,7 +127,7 @@ WordManager* init_analysis(const char* filename)
  *		3. select axis words in samples.
  *			- using vector to itself
  */
-void create_axisIdxTable(WordManager *wordManager)
+void create_axisIdxTable(WordManager *wordManager, const char* filename);
 
 /*
  * Function Name	: hash_word
@@ -168,199 +167,169 @@ HashIdx check_word_existence(const WordManager* wordManager, const char* wordStr
  */
 bool register_word(WordManager* wordManager, const char* wordStr);
 
-
-/***********************************************/
-
-
 /*
- * Function Name	: calculate_vector
- * Parameter		: wordManager 
- * Return value		: void
- * Role				: 
- *		1. initialize relation queue.
- *		2. read word from file
- *		3-1. if word is separator
- *			a. get type of separator
- *			b. process the separator
- *		3-2. else
- *			a. get wordIdx
- *			b. process relation
- *				
- * Using function	:
- *		1. 
- * Description		:
- *		none
+ * Function Name    : calculate_vector
+ * Parameter        : a pointer of word manager, a pointer of input file name string
+ * Return value     : void
+ * Role             :
+ *      1. initialize relation queue.
+ *      2. read word from file
+ *      3-1. if word is separator
+ *          a. get type of separator
+ *          b. process the separator
+ *      3-2. else
+ *          a. get wordIdx
+ *          b. process relation
+ *      4. normalize the vectors
  */
-void calculate_vector(WordManager *wordManager);
+void calculate_vector(WordManager *wordManager, const char *fileName);
 
 /*
- * Function Name	: process_separator
- * Parameter		: rqueue, wordIdx
- * Return value		: void
- * Role				: 
- *		1. call insert_word_to_rqueue
- *		2. check the word at the middle of the relation queue is axis or not.
- *		3. if the word is axis, call update_vector
- * Using function	:
- *		1. 
- * Description		:
- *		none
+ * Function Name    : hash_word
+ * Parameter        : a pointer of the word string
+ * Return value     : hashIdx of the word
+ * Role             :
+ *      1. get hashIdx of the word through hashing the word.
+ *          - hash(word) = HashIdx
  */
-void process_relation(WordIdx *rqueue, WordIdx wordIdx);
+HashIdx hash_word(const char* wordStr);
 
 /*
- * Function Name	: update_vector
- * Parameter		: rqueue, axisIdx
- * Return value		: void
- * Role				: 
- *		1. update vector of word that which is in the relation queue.
- *			- increase vector element of axisIdx axis.
- * Using function	:
- *		1. 
- * Description		:
- *		none
+ * Function Name    : normalize_vector
+ * Parameter        : a pointer of word manager
+ * Return value     : void
+ * Role             :
+ *      1. calculate size of the vectors
+ *      2. divide the vectors by its size
  */
-void update_vector(WordIdx *rqueue, AxisIdx axisIdx);
+void normalize_vector(WordManager *wordManager);
 
 /*
- * Function Name	: insert_word_to_rqueue
- * Parameter		: rqueue, wordIdx, a pointer of rear idx of rqueue
- * Return value		: void
- * Role				: 
- *		1. insert word to relation queue at pIdx, by WordIdx value.
- *			- rqueue[pIdx] = wordIdx
- *		2. change pIdx value to next index.
- * Using function	:
- *		1. 
- * Description		:
- *		none
+ * Function Name    : process_relation
+ * Parameter        : a pointer of word manager, rqueue, a pointer of rear idx of rqueue, wordIdx
+ * Return value     : void
+ * Role             :
+ *      1. call insert_word_to_rqueue
+ *      2. check the word at the middle of the relation queue is axis or not.
+ *      3. if the word is axis, call update_vector
+ */
+void process_relation(WordManager *wordManager, WordIdx *rqueue, int *pIdx, WordIdx wordIdx);
+
+/*
+ * Function Name    : update_vector
+ * Parameter        : a pointer of word manager, rqueue, axisIdx
+ * Return value     : void
+ * Role             :
+ *      1. update vector of word that which is in the relation queue.
+ *          - increase vector element of axisIdx axis.
+ */
+void update_vector(WordManager *wordManager, WordIdx *rqueue, AxisIdx axisIdx);
+
+/*
+ * Function Name    : insert_word_to_rqueue
+ * Parameter        : rqueue, wordIdx, a pointer of rear idx of rqueue
+ * Return value     : void
+ * Role             :
+ *      1. insert word to relation queue at pIdx, by WordIdx value.
+ *          - rqueue[pIdx] = wordIdx
+ *      2. change pIdx value to next index.
  */
 void insert_word_to_rqueue(WordIdx *rqueue, WordIdx wordIdx, int *pIdx);
 
 /*
- * Function Name	: read_word_from_file 
- * Parameter		: a file pointer, a pointer of word string
- * Return value		: void
- * Role				: 
- *		1. read word from input text file. (token is whitespace)
- *		2. put string to wordStr.
- * Using function	:
- *		1. 
- * Description		:
- *		none
+ * Function Name    : read_word_from_file
+ * Parameter        : a file pointer, a pointer of word string
+ * Return value     : void
+ * Role             :
+ *      1. read word from input text file. (token is whitespace)
+ *      2. put string to wordStr.
  */
 void read_word_from_file(FILE *fp, char *wordStr);
 
 /*
- * Function Name	: get_axisIdx
- * Parameter		: wordIdx
- * Return value		: axisIdx
- * Role				: 
- *		1. check parameter wordIdx is an axis or not.
- *		2. return axisIdx.
- * Using function	:
- *		1. 
- * Description		:
- *		none
+ * Function Name    : get_axisIdx
+ * Parameter        : a pointer of word manager, wordIdx
+ * Return value     : axisIdx of the word if word of wordIdx is axis, 0 if not
+ * Role             :
+ *      1. get and return axisIdx of the word from parameter wordIdx
  */
-AxisIdx get_axisIdx(WordIdx wordIdx);
+inline AxisIdx get_axisIdx(WordManager *wordManager, WordIdx wordIdx);
 
 /*
- * Function Name	: get_wordIdx
- * Parameter		: a 
- * Return value		: 
- * Role				: 
- *		1. call hash_word to get hash value of input string.
- *		2. get and return wordIdx of it by wordIdxTable array.
- * Using function	:
- *		1. 
- * Description		:
- *		none
+ * Function Name    : get_wordIdx
+ * Parameter        : a pointer of word manager, a pointer of word string
+ * Return value     : wordIdx of the string (return 0 if the word not exist)
+ * Role             :
+ *      1. call hash_word to get hash value of input string.
+ *      2. get and return wordIdx of it by wordIdxTable array if collision does not appear.
+ *      3. if there is collision, call collision_hash and get new wordIdx to return.
  */
-// 이 함수에서 할 일이 더 많을듯.
-// wordStr바탕으로 해쉬값구한뒤 해쉬콜리전을 고려해야함으로 strcmp()로 단어문자열이랑 계속 비교하면서 맞는거 나올때까지 탐색해야함.
-inline WordIdx get_wordIdx(const char *wordStr);
+WordIdx get_wordIdx(WordManager *wordManager, const char *wordStr);
 
 /*
- * Function Name	: init_rqueue
- * Parameter		: rqueue
- * Return value		: void
- * Role				: 
- *		1. initialize relation queue.
- *			- put junk word(something like /dev/null) to all elements of rqueue
- * Using function	:
- *		1. 
- * Description		:
- *		none
+ * Function Name    : init_rqueue
+ * Parameter        : rqueue
+ * Return value     : void
+ * Role             :
+ *      1. initialize relation queue.
+ *          - put junk word(something like /dev/null) to all elements of rqueue
  */
 void init_rqueue(WordIdx *rqueue);
 
 /*
- * Function Name	: next_rqueue_idx
- * Parameter		: rear idx of rqueue
- * Return value		: next rear idx of rqueue
- * Role				: 
- *		1. return next index of relation queue 
- * Using function	:
- *		1. 
- * Description		:
- *		none
+ * Function Name    : next_rqueue_idx
+ * Parameter        : rear idx of rqueue
+ * Return value     : next rear idx of rqueue
+ * Role             :
+ *      1. return next index of relation queue
  */
 inline int next_rqueue_idx(int idx);
 
 /*
- * Function Name	: rqueue_mid_idx
- * Parameter		: rear idx of rqueue
- * Return value		: middle index of relation queue
- * Role				: 
- *		1. return the middle index of relation queue
- * Using function	:
- *		1. 
- * Description		:
- *		none
+ * Function Name    : rqueue_mid_idx
+ * Parameter        : rear idx of rqueue
+ * Return value     : middle index of relation queue
+ * Role             :
+ *      1. return the middle index of relation queue
  */
 inline int rqueue_mid_idx(int idx);
 
 /*
- * Function Name	: check_separator
- * Parameter		: a pointer of word string
- * Return value		: true if word is seperator, false if not
- * Role				: 
- *		1. check the parameter string wordStr is a separator or not.
- * Using function	:
- *		1. 
- * Description		:
- *		none
+ * Function Name    : check_separator
+ * Parameter        : a pointer of word string
+ * Return value     : true if word is seperator, false if not
+ * Role             :
+ *      1. check the parameter string wordStr is a separator or not.
  */
-bool check_separator(char *wordStr);
+inline bool check_separator(char *wordStr);
 
 /*
- * Function Name	: get_separator_type
- * Parameter		: a pointer of word string
- * Return value		: type of separator
- * Role				: 
- *		1. return the type of separator wordStr.
- * Using function	:
- *		1. 
- * Description		:
- *		none
+ * Function Name    : get_separator_type
+ * Parameter        : a pointer of word string
+ * Return value     : type of separator
+ * Role             :
+ *      1. return the type of separator wordStr.
  */
-SepType get_separator_type(char *wordStr);
+inline SepType get_separator_type(char *wordStr);
 
 /*
- * Function Name	: process_separator
- * Parameter		: rqueue, a pointer of rear idx of rqueue, type of seperator
- * Return value		: void
- * Role				: 
- *		1. process particular operations to relation queue and vector, depending on separator Type.
- * Using function	:
- *		1. 
- * Description		:
- *		none
+ * Function Name    : process_separator
+ * Parameter        : a pointer of word manager, rqueue, a pointer of rear idx of rqueue, type of seperator
+ * Return value     : void
+ * Role             :
+ *      1. process particular operations to relation queue and vector, depending on separator Type.
  */
-void process_separator(WordIdx *rqueue, int *pIdx, SepType sepType);
+void process_separator(WordManager *wordManager, WordIdx *rqueue, int *pIdx, SepType sepType);
 
-HashIdx collision_hash(HashIdx hashIdx, const char* WordStr);
+/*
+ * Function Name	: collision_hash
+ * Parameter		: hashIdx, a pointer of word string 
+ * Return value		: next hashIdx
+ * Role				: 
+ *		1. 
+ *			- 
+ */
+inline HashIdx collision_hash(HashIdx hashIdx, const char* WordStr);
 
 /*
  * Function Name	: export_result
@@ -369,6 +338,6 @@ HashIdx collision_hash(HashIdx hashIdx, const char* WordStr);
  * Role				: 
  *		1. export words, its' vector values and etc,...
  */
-void export_result(const WordManager *wordManager, const char* filename)
+void export_result(const WordManager *wordManager, const char* filename);
 
 #endif
