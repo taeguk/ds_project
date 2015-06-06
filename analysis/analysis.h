@@ -18,7 +18,6 @@
 #define RELATION_QUEUE_SIZE (10 * 2 + 1)
 
 typedef	unsigned int WordCnt;
-//typedef unsigned int WordVec;
 typedef double WordVec;
 typedef unsigned int HashIdx;
 typedef unsigned int WordIdx;
@@ -46,7 +45,7 @@ typedef enum {
 typedef struct _Word {
 	char wordStr[MAX_WORD_SIZE];
 	WordCnt wordCnt;
-	WordVec* wordVec//[AXIS_NUM+1];	// wordVec[0] is junk.
+	WordVec* wordVec;	// wordVec[0] is junk.
 } Word;
 
 /*
@@ -59,24 +58,18 @@ typedef struct _Word {
  * 2. wordNum
  *		- the number of words
  *		- not include junk word(word[0]).
- * 3. wordIdxTable
+ * 3. axisNum
+ *		- the number of axis words
+ * 4. wordIdxTable
  *		- the value is 0 if index hash is not registered.
- *		- wordIdx if it's registerd.
+ *		- the value is wordIdx if it's registerd.
  *		- wordIdxTable[hashIdx] : wordIdx
- * 4. axisIdxTable
+ * 5. axisIdxTable
  *		- the value is 0 if index word is not an axis,
  *		- axisIdx if it's an axis.
  *		- axisIdxTable[wordIdx] : axisIdx
  */
 
-/*
-typedef struct _WordManager {
-	Word word[MAX_WORD_NUM];		// word[0] is junk.
-	int wordNum;
-	WordIdx wordIdxTable[MAX_HASH_SIZE];
-	AxisIdx axisIdxTable[MAX_WORD_NUM];		// axisIdxTable[0] is junk.
-} WordManager;
-*/
 typedef struct _WordManager {
 	Word *word;		// word[0] is junk.
 	int wordNum;
@@ -92,28 +85,50 @@ typedef struct _WordManager {
  * Role				: 
  *		1. 
  *			- 
- * Using function	:
- *		1. 
- * Description		:
- *		none
  */
 
 /*
- * Function Name	: init_analysis
- * Parameter		: wordManager
+ * This is wrapping functions of malloc, calloc, realloc.
+ * Check memory allocation failure.
+ */
+void* malloc_wrap(size_t size);
+void* calloc_wrap(size_t num, size_t size);
+void* realloc_wrap(void* ptr, size_t size);
+
+/*
+ * Function Name	: free_wordManager
+ * Parameter		: a pointer of word manager
  * Return value		: void
+ * Role				: 
+ *		1. free word manager deeply.
+ */
+void free_wordManager(WordManager *wordManager)
+
+/*
+ * Function Name	: init_analysis
+ * Parameter		: a pointer of input file name string
+ * Return value		: a pointer of word manager
  * Role				: 
  *		1. get words' wordCnt.
  *			- count the number of the words
  *		2. create wordIdxTable.
  *		3. create axisIdxTable.
  *			- select proper axis words
- * Using function	:
- *		1. 
- * Description		:
- *		none
  */
-void init_analysis(WordManager* wordManager);
+WordManager* init_analysis(const char* filename)
+
+/*
+ * Function Name	: create_axisIdxTable 
+ * Parameter		: a pointer of word manager
+ * Return value		: void
+ * Role				: 
+ *		1. select sample words randomly in word manager
+ *			- and create sample manager using that.
+ *		2. calculate vector of samples
+ *		3. select axis words in samples.
+ *			- using vector to itself
+ */
+void create_axisIdxTable(WordManager *wordManager)
 
 /*
  * Function Name	: hash_word
@@ -131,22 +146,18 @@ HashIdx hash_word(const char* wordStr);
 
 /*
  * Function Name	: check_word_existence
- * Parameter		: wordManager, a pointer of the word string
+ * Parameter		: a pointer of word manager, a pointer of the word string
  * Return value		: 0 if exist, hashIdx which will inserted if not exist
  * Role				: 
  *		1. get hashIdx of the word using hash_word.
  *			- hash(word) = hashIdx
  *		2. check word's existence using wordIdxTable.
- * Using function	:
- *		1. hash_word
- * Description		:
- *		none
  */
 HashIdx check_word_existence(const WordManager* wordManager, const char* wordStr);
 
 /*
  * Function Name	: register_word
- * Parameter		: wordManager, a pointer of the word string
+ * Parameter		: a pointer of word manager, a pointer of the word string
  * Return value		: true if success, false if fail
  * Role				: 
  *		1. get hashIdx of the word using hash_word.
@@ -154,10 +165,6 @@ HashIdx check_word_existence(const WordManager* wordManager, const char* wordStr
  *		2. check word's existence using wordIdxTable.
  *		3. if word exists, increase word's wordCnt and return false.
  *		4. else, insert word to wordManager, increase wordNum, register new wordIdx to wordIdxTable and return true.
- * Using function	:
- *		1. 
- * Description		:
- *		none
  */
 bool register_word(WordManager* wordManager, const char* wordStr);
 
@@ -357,15 +364,11 @@ HashIdx collision_hash(HashIdx hashIdx, const char* WordStr);
 
 /*
  * Function Name	: export_result
- * Parameter		: wordManager
+ * Parameter		: a pointer of word manager, a pointer of output file name string
  * Return value		: void
  * Role				: 
- *		1. export tables and words to file
- * Using function	:
- *		1. 
- * Description		:
- *		none
+ *		1. export words, its' vector values and etc,...
  */
-void export_result(WordManager *wordManager);
+void export_result(const WordManager *wordManager, const char* filename)
 
 #endif

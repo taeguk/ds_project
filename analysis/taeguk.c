@@ -1,11 +1,41 @@
 #include "analysis.h"
 
+void* malloc_wrap(size_t size)
+{
+	void* ret = malloc(size);
+	if(!ret) {
+		fprintf(stderr, "[Error] cannot malloc. check memory please.\n");
+		exit(1);
+	}
+	return ret;
+}
+
+void* calloc_wrap(size_t num, size_t size)
+{
+	void* ret = calloc(num, size);
+	if(!ret) {
+		fprintf(stderr, "[Error] cannot calloc. check memory please.\n");
+		exit(1);
+	}
+	return ret;
+}
+
+void* realloc_wrap(void* ptr, size_t size)
+{
+	void* ret = realloc(ptr, size);
+	if(!ret) {
+		fprintf(stderr, "[Error] cannot realloc. check memory please.\n");
+		exit(1);
+	}
+	return ret;
+}
+
 int main(int argc, char *argv[])
 {
 	WordManager* wordManager;
 
 	if(argc != 3) {
-		fprintf(stderr, "[Usage] %s <INPUT_FILE> <OUTPUT_FILE>", argv[0]);
+		fprintf(stderr, "[Usage] %s <INPUT_FILE> <OUTPUT_FILE>\n", argv[0]);
 		return 1;
 	}
 
@@ -18,33 +48,17 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-/*
- * Function Name	: init_analysis
- * Parameter		: wordManager
- * Return value		: void
- * Role				: 
- *		1. get words' wordCnt.
- *			- count the number of the words
- *		2. create wordIdxTable.
- *		3. create axisIdxTable.
- *			- select proper axis words
- * Using function	:
- *		1. 
- * Description		:
- *		none
- */
 WordManager* init_analysis(const char* filename)
 {
 	FILE * fp = fopen(filename, "r");
 	WordManager *wordManager;
 	int i,j;
 
-	//wordManager->word[0] : junk
-	
-	wordManager = (WordManager*) malloc(sizeof(WordManager));
-	wordManager->word = (Word*) malloc(sizeof(Word) * MAX_WORD_NUM);
+	// create word manager.
+	wordManager = (WordManager*) malloc_wrap(sizeof(WordManager));
+	wordManager->word = (Word*) malloc_wrap(sizeof(Word) * MAX_WORD_NUM);
 	wordManager->wordNum = 0;
-	wordManager->wordIdxTable = (WordIdx*) calloc(MAX_HASH_SIZE, sizeof(WordIdx));
+	wordManager->wordIdxTable = (WordIdx*) calloc_wrap(MAX_HASH_SIZE, sizeof(WordIdx));
 	
 	// get words' wordCnt and create wordIdxTable.
 	while(1) {
@@ -77,12 +91,11 @@ void create_axisIdxTable(WordManager *wordManager)
 
 	/* 
 	 * 1. select sample words randomly in sorted words 
-	 *	  and create sampleManager->
+	 *	  and create sampleManager.
 	 */
-
-	// sort all word, but using data reference moving for effectiveness
+	// sort all word, but using data reference moving for effectiveness.
 	// using insertion sort.
-	sortedWordIdx = (WordIdx*) malloc(sizeof(WordIdx) * (wordManager->wordNum+1));
+	sortedWordIdx = (WordIdx*) malloc_wrap(sizeof(WordIdx) * (wordManager->wordNum+1));
 	for(i=1; i <= wordManager->wordNum; ++i) {
 		int wi = sortedWordIdx[i] = i;
 		for(j=i-1; j >= 1 && wordManager->word[sortedWordIdx[j]].wordCnt > wordManager->word[wi].wordCnt; --j)
@@ -90,7 +103,7 @@ void create_axisIdxTable(WordManager *wordManager)
 		sortedWordIdx[j+1] = wi;
 	}
 
-	// get a index gap
+	// calculate a index gap.
 	gap = wordManager->wordNum / SIMULATION_NUM;
 	if(gap == 0) {
 		gap = 1;
@@ -99,32 +112,30 @@ void create_axisIdxTable(WordManager *wordManager)
 		sampleNum = SIMULATION_NUM;
 	}
 
-	// create sample manager
-	sampleManager = (WordManager*) malloc(sizeof(WordManager));
-	sampleManager->word = (Word*) calloc(sampleNum+1, sizeof(Word));
+	// create sample manager.
+	sampleManager = (WordManager*) malloc_wrap(sizeof(WordManager));
+	sampleManager->word = (Word*) calloc_wrap(sampleNum+1, sizeof(Word));
 	sampleManager->wordNum = sampleManager->axisNum = sampleNum;
-	sampleManager->wordIdxTable = (WordIdx*) calloc(MAX_HASH_SIZE, sizeof(WordIdx));
-	sampleManager->axisIdxTable = (AxisIdx*) calloc(sampleNum+1, sizeof(AxisIdx));
+	sampleManager->wordIdxTable = (WordIdx*) calloc_wrap(MAX_HASH_SIZE, sizeof(WordIdx));
+	sampleManager->axisIdxTable = (AxisIdx*) calloc_wrap(sampleNum+1, sizeof(AxisIdx));
 
-	// select sample words randomly
+	// select sample words randomly.
 	for(i=1,j=gap; i <= sampleManager->wordNum; ++i,j+=gap) {
+		HashIdx hashIdx;
 		sampleManager->word[i] = wordManager->word[sortedWordIdx[j]];
-		sampleManager->word[i].wordVec = (WordVec*) calloc(sampleManager->axisNum+1, sizeof(WordVec));
-		HashIdx hashIdx = check_word_existence(&sampleManager, sampleManager->word[i].wordStr);
+		sampleManager->word[i].wordVec = (WordVec*) calloc_wrap(sampleManager->axisNum+1, sizeof(WordVec));
+		hashIdx = check_word_existence(&sampleManager, sampleManager->word[i].wordStr);
 		sampleManager->wordIdxTable[hashIdx] = i;
 		sampleManager->axisIdxTable[i] = i;
 	}
 
-
 	/*
-	 * 2. calculate vector of samples
+	 * 2. calculate vector of samples.
 	 */
-
 	calculate_vector(&sampleManager);
 
-
 	/*
-	 * 3. select axis word in samples.
+	 * 3. select axis words in samples.
 	 */
 	
 	// sort sample words in vector to itself desc order.
@@ -135,38 +146,17 @@ void create_axisIdxTable(WordManager *wordManager)
 		sampleWordIdx[j+1] = wi;
 	}
 
-	// create word manager's axisIdxTable
+	// create word manager's axisIdxTable.
 	wordManager->axisNum = (sampleManager->wordNum < AXIS_NUM ? sampleManager->wordNum : AXIS_NUM);
-	wordManager->axisIdxTable = (AxisIdx*) calloc(wordmanager->axisNum, sizeof(AxisIdx));
+	wordManager->axisIdxTable = (AxisIdx*) calloc_wrap(wordmanager->axisNum, sizeof(AxisIdx));
 	for(i=1; i <= wordmanager->axisNum; ++i) {
 		WordIdx wordIdx = get_wordIdx(wordManager, sampleManager->word[sampleWordIdx[i]].wordStr);
 		wordManager->axisIdxTable[i] = wordIdx;
 	}
 
 	free_wordManager(sampleManager);
-/*
-	free(sampleManager->word);
-	free(sampleManager->wordIdxTable);
-	free(sampleManager->axisIdxTable);
-	free(sampleManager);
-*/
 }
 
-/*
- * Function Name	: register_word
- * Parameter		: wordManager, a pointer of the word string
- * Return value		: true if success, false if fail
- * Role				: 
- *		1. get hashIdx of the word using hash_word.
- *			- hash(word) = hashIdx
- *		2. check word's existence using wordIdxTable.
- *		3. if word exists, increase word's wordCnt and return false.
- *		4. else, insert word to wordManager, increase wordNum, register new wordIdx to wordIdxTable and return true.
- * Using function	:
- *		1. 
- * Description		:
- *		none
- */
 bool register_word(WordManager* wordManager, const char* wordStr)
 {
 	HashIdx hashIdx;
@@ -180,19 +170,6 @@ bool register_word(WordManager* wordManager, const char* wordStr)
 	}
 }
 
-/*
- * Function Name	: check_word_existence
- * Parameter		: wordManager, a pointer of the word string
- * Return value		: 0 if exist, hashIdx which will inserted if not exist
- * Role				: 
- *		1. get hashIdx of the word using hash_word.
- *			- hash(word) = hashIdx
- *		2. check word's existence using wordIdxTable.
- * Using function	:
- *		1. hash_word
- * Description		:
- *		none
- */
 HashIdx check_word_existence(const WordManager* wordManager, const char* wordStr)
 {
 	HashIdx hashIdx = hash_word(wordStr);
