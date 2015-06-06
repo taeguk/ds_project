@@ -3,16 +3,23 @@
 
 #include <stdbool.h>
 
+#define SAMPLE_NUM		3000
+//#define MIN_SAMPLE_WORD_CNT		100
+
+#define SIMULATION_NUM	1000
+//#define FILTER_RATE		0.80
+
 #define MAX_WORD_SIZE	100
 
 #define MAX_HASH_SIZE	(MAX_WORD_NUM * 20)
 #define MAX_WORD_NUM	500000
-#define AXIS_NUM		200		// real axis num is 200. axis[0] = junk.
+#define AXIS_NUM		200
 
 #define RELATION_QUEUE_SIZE (10 * 2 + 1)
 
 typedef	unsigned int WordCnt;
-typedef unsigned int WordVec;
+//typedef unsigned int WordVec;
+typedef double WordVec;
 typedef unsigned int HashIdx;
 typedef unsigned int WordIdx;
 typedef unsigned int AxisIdx;
@@ -39,7 +46,7 @@ typedef enum {
 typedef struct _Word {
 	char wordStr[MAX_WORD_SIZE];
 	WordCnt wordCnt;
-	WordVec wordVec[AXIS_NUM+1];	// wordVec[0] is junk.
+	WordVec* wordVec//[AXIS_NUM+1];	// wordVec[0] is junk.
 } Word;
 
 /*
@@ -51,8 +58,7 @@ typedef struct _Word {
  *		- word[0] is junk
  * 2. wordNum
  *		- the number of words
- *		- include junk word(word[0]).
- *		- real wordNum = wordNum - 1
+ *		- not include junk word(word[0]).
  * 3. wordIdxTable
  *		- the value is 0 if index hash is not registered.
  *		- wordIdx if it's registerd.
@@ -74,6 +80,7 @@ typedef struct _WordManager {
 typedef struct _WordManager {
 	Word *word;		// word[0] is junk.
 	int wordNum;
+	int axisNum;
 	WordIdx *wordIdxTable;
 	AxisIdx *axisIdxTable;		// axisIdxTable[0] is junk.
 } WordManager;
