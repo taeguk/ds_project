@@ -151,7 +151,7 @@ void create_axisIdxTable(WordManager *wordManager)
 	wordManager->axisIdxTable = (AxisIdx*) calloc_wrap(wordmanager->axisNum, sizeof(AxisIdx));
 	for(i=1; i <= wordmanager->axisNum; ++i) {
 		WordIdx wordIdx = get_wordIdx(wordManager, sampleManager->word[sampleWordIdx[i]].wordStr);
-		wordManager->axisIdxTable[i] = wordIdx;
+		wordManager->axisIdxTable[wordIdx] = i;
 	}
 
 	free_wordManager(sampleManager);
@@ -187,15 +187,15 @@ HashIdx check_word_existence(const WordManager* wordManager, const char* wordStr
 void export_result(const WordManager *wordManager, const char* filename)
 {
 	FILE * fp = fopen(filename, "wb");
-	int mhs = MAX_HASH_SIZE;
+	int mws = MAX_WORD_SIZE;
 	int i;
 
 	// export a number of words
 	fwrite(&wordManager->wordNum, sizeof(wordManager->wordNum), 1, fp);
 	// export a number of axis
 	fwrite(&wordManager->axisNum, sizeof(wordManager->axisNum), 1, fp);
-	// export MAX_HASH_SIZE
-	fwrite(&mhs, sizeof(mhs), 1, fp);
+	// export MAX_WORD_SIZE
+	fwrite(&mws, sizeof(mws), 1, fp);
 
 	// export words
 	for(i=1; i <= wordManager->wordNum; ++i) {
@@ -204,13 +204,12 @@ void export_result(const WordManager *wordManager, const char* filename)
 		fwrite(&curWord->wordCnt, sizeof(WordCnt), 1, fp);
 		fwrite(curWord->wordVec+1, sizeof(WordVec), wordManager->axisNum, fp);
 	}
-/*
-	// export wordIdxTable
-	fwrite(wordManager->wordIdxTable, sizeof(WordIdx), mhs, fp);
+
+	// not export wordIdxTable because it is depending on hash functions.
 
 	// export axisIdxTable
-	fwrite(wordManager->axisIdxTable, sizeof(AxisIdx), axisNum+1, fp);
-*/
+	fwrite(wordManager->axisIdxTable+1, sizeof(AxisIdx), axisNum, fp);
+
 	fclose(fp);
 }
 
