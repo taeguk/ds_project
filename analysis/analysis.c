@@ -9,10 +9,13 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	fprintf(stdout, "[*] initializing for analysis...\n");
 	wordManager = init_analysis(argv[1]);
 
+	fprintf(stdout, "[*] calculating vector...\n");
 	calculate_vector(wordManager, argv[1]);
 
+	fprintf(stdout, "[*] exporting result...\n");
 	export_result(wordManager, argv[2]);
 
 	return 0;
@@ -24,13 +27,15 @@ WordManager* init_analysis(const char* filename)
 	WordManager *wordManager;
 	int i,j;
 
-	// create word manager.
+	// create word manager.	
+	fprintf(stdout, "\t[*] creating word manager...\n");
 	wordManager = (WordManager*) malloc_wrap(sizeof(WordManager));
 	wordManager->word = (Word*) malloc_wrap(sizeof(Word) * MAX_WORD_NUM);
 	wordManager->wordNum = 0;
 	wordManager->wordIdxTable = (WordIdx*) calloc_wrap(MAX_HASH_SIZE, sizeof(WordIdx));
 	
 	// get words' wordCnt and create wordIdxTable.
+	fprintf(stdout, "\t[*] get words' wordCnt and create wordIdxTable...\n");
 	while(1) {
 		Word* curWord = &wordManager->word[wordManager->wordNum+1];
 		read_word_from_file(fp, curWord->wordStr);
@@ -41,10 +46,12 @@ WordManager* init_analysis(const char* filename)
 			break;
 		}
 	}
+	fprintf(stdout, "\t\t[*] the number of words = %d\n", wordManager->wordNum);
 
 	fclose(fp);
 
 	// create axisIdxTable.
+	fprintf(stdout, "\t[*] creating axisIdxTable...\n");
 	create_axisIdxTable(wordManager, filename);
 
 	return wordManager;
@@ -63,8 +70,10 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename)
 	 * 1. select sample words randomly in sorted words 
 	 *	  and create sampleManager.
 	 */
-	// sort all word, but using data reference moving for effectiveness.
+	fprintf(stdout, "\t[*] creating axisIdxTable... [stage 1]\n");
+	// sort all words, but using data reference moving for effectiveness.
 	// using insertion sort.
+	fprintf(stdout, "\t\t[*] sort all words\n");
 	sortedWordIdx = (WordIdx*) malloc_wrap(sizeof(WordIdx) * (wordManager->wordNum+1));
 	for(i=1; i <= wordManager->wordNum; ++i) {
 		int wi = sortedWordIdx[i] = i;
@@ -83,13 +92,16 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename)
 	}
 
 	// create sample manager.
+	fprintf(stdout, "\t\t[*] create sampleManager\n");
 	sampleManager = (WordManager*) malloc_wrap(sizeof(WordManager));
 	sampleManager->word = (Word*) calloc_wrap(sampleNum+1, sizeof(Word));
 	sampleManager->wordNum = sampleManager->axisNum = sampleNum;
 	sampleManager->wordIdxTable = (WordIdx*) calloc_wrap(MAX_HASH_SIZE, sizeof(WordIdx));
 	sampleManager->axisIdxTable = (AxisIdx*) calloc_wrap(sampleNum+1, sizeof(AxisIdx));
+	sampleManager->word[0].wordVec = (WordVec*) calloc_wrap(sampleNum+1, sizeof(WordVec));
 
 	// select sample words randomly.
+	fprintf(stdout, "\t\t[*] select sample words ramdomly\n");
 	for(i=1,j=gap; i <= sampleManager->wordNum; ++i,j+=gap) {
 		HashIdx hashIdx;
 		sampleManager->word[i] = wordManager->word[sortedWordIdx[j]];
@@ -102,13 +114,15 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename)
 	/*
 	 * 2. calculate vector of samples.
 	 */
+	fprintf(stdout, "\t[*] creating axisIdxTable... [stage 2]\n");
 	calculate_vector(sampleManager, filename);
 
 	/*
 	 * 3. select axis words in samples.
 	 */
-	
+	fprintf(stdout, "\t[*] creating axisIdxTable... [stage 3]\n");	
 	// sort sample words in vector to itself desc order.
+	fprintf(stdout, "\t\t[*] sort sample words\n");
 	for(i=1; i <= sampleManager->wordNum; ++i) {
 		WordIdx wi = sampleWordIdx[i] = i;
 		for(j=i-1; j >= 1 && sampleManager->word[sampleWordIdx[j]].wordVec[sampleWordIdx[j]] < sampleManager->word[wi].wordVec[wi]; --j)
@@ -117,11 +131,17 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename)
 	}
 
 	// create word manager's axisIdxTable.
+	fprintf(stdout, "\t\t[*] create word manager's axisIdxTable\n");
 	wordManager->axisNum = (sampleManager->wordNum < AXIS_NUM ? sampleManager->wordNum : AXIS_NUM);
-	wordManager->axisIdxTable = (AxisIdx*) calloc_wrap(wordManager->axisNum, sizeof(AxisIdx));
+	wordManager->axisIdxTable = (AxisIdx*) calloc_wrap(wordManager->wordNum, sizeof(AxisIdx));
 	for(i=1; i <= wordManager->axisNum; ++i) {
 		WordIdx wordIdx = get_wordIdx(wordManager, sampleManager->word[sampleWordIdx[i]].wordStr);
 		wordManager->axisIdxTable[wordIdx] = i;
+	}
+
+	wordManager->word[0].wordVec = (WordVec*) calloc_wrap(wordManager->axisNum+1, sizeof(WordVec));
+	for(i=1; i <= wordManager->wordNum; ++i) {
+		wordManager->word[i].wordVec = (WordVec*) calloc_wrap(wordManager->axisNum+1, sizeof(WordVec));
 	}
 
 	free_wordManager(sampleManager);
@@ -186,7 +206,7 @@ void export_result(const WordManager *wordManager, const char* filename)
 void free_wordManager(WordManager *wordManager)
 {
 	int i;
-	for(i=0; i<wordManager->wordNum; ++i) {
+	for(i=0; i<=wordManager->wordNum; ++i) {
 		free(wordManager->word[i].wordVec);
 	}
 	free(wordManager->word);
@@ -202,29 +222,29 @@ inline HashIdx collision_hash(HashIdx hashIdx, const char* WordStr)
 
 void calculate_vector(WordManager *wordManager, const char *fileName)
 {
-        WordIdx rqueue[RELATION_QUEUE_SIZE];
-        char wordStr[MAX_WORD_SIZE];
-        FILE *fp;
-        SepType sepType;
-        WordIdx wordIdx;
-        int idx;
+	WordIdx rqueue[RELATION_QUEUE_SIZE];
+	char wordStr[MAX_WORD_SIZE];
+	FILE *fp;
+	SepType sepType;
+	WordIdx wordIdx;
+	int idx;
 
-        fp = fopen(fileName, "r");
-        init_rqueue(rqueue);
-        for( ; ; ) {
-                read_word_from_file(fp, wordStr);
-                sepType = get_separator_type(wordStr);
-                if(sepType) { //sepType != NOT_SEP, if separator
-                        process_separator(wordManager, rqueue, &idx, sepType);
-                } else { //sepType == NOT_SEP, if not separator
-                        wordIdx = get_wordIdx(wordManager, wordStr);
-                        if(!wordIdx) { continue; }
-                        process_relation(wordManager, rqueue, &idx, wordIdx);
-                }
-                if(sepType == SEP_EOF) break;
-        }
-        fclose(fp);
-        normalize_vector(wordManager);
+	fp = fopen(fileName, "r");
+	init_rqueue(rqueue);
+	for( ; ; ) {
+		read_word_from_file(fp, wordStr);
+		sepType = get_separator_type(wordStr);
+		if(sepType) { //sepType != NOT_SEP, if separator
+			process_separator(wordManager, rqueue, &idx, sepType);
+		} else { //sepType == NOT_SEP, if not separator
+			wordIdx = get_wordIdx(wordManager, wordStr);
+			if(!wordIdx) { continue; }
+			process_relation(wordManager, rqueue, &idx, wordIdx);
+		}
+		if(sepType == SEP_EOF) break;
+	}
+	fclose(fp);
+	normalize_vector(wordManager);
 }
 
 HashIdx hash_word(const char* wordStr)
@@ -274,7 +294,8 @@ void update_vector(WordManager *wordManager, WordIdx *rqueue, AxisIdx axisIdx)
 
 void insert_word_to_rqueue(WordIdx *rqueue, WordIdx wordIdx, int *pIdx)
 {
-	rqueue[++(*pIdx)] = wordIdx;
+	*pIdx = next_rqueue_idx(*pIdx);
+	rqueue[*pIdx] = wordIdx;
 }
 
 void read_word_from_file(FILE *fp, char *wordStr)
@@ -285,15 +306,16 @@ void read_word_from_file(FILE *fp, char *wordStr)
 	//get word from file to wordStr
 	for(i = 0; i < MAX_WORD_SIZE; i++) {
 		ch = fgetc(fp);
-		if(i == 0 && ch == ' ') {
-			while((ch = fgetc(fp)) != ' ');
+		if(i == 0 && (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n')) {
+			//while((ch = fgetc(fp)) != ' ');
+			continue;
 		}
 		if(ch == EOF) {
 			wordStr[0] = 0;
 			wordStr[1] = SEP_EOF;
 			return;
 		}
-		if(ch == ' ') {
+		if(ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n') {
 			wordStr[i] = 0;
 			return;
 		}
