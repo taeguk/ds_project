@@ -1,7 +1,22 @@
 #include "analysis.h"
 
-#define INPUT_FILE "input.txt"
-#define OUTPUT_FILE "output.txt"
+int main(int argc, char *argv[])
+{
+	WordManager* wordManager;
+
+	if(argc != 3) {
+		fprintf(stderr, "[Usage] %s <INPUT_FILE> <OUTPUT_FILE>", argv[0]);
+		return 1;
+	}
+
+	wordManager = init_analysis(argv[1]);
+
+	calculate_vector(wordManager, argv[1]);
+
+	export_result(wordManager, argv[2]);
+
+	return 0;
+}
 
 /*
  * Function Name	: init_analysis
@@ -18,14 +33,19 @@
  * Description		:
  *		none
  */
-void init_analysis(WordManager* wordManager)
+WordManager* init_analysis(const char* filename)
 {
-	FILE * fp = fopen(INPUT_FILE, "r");
+	FILE * fp = fopen(filename, "r");
+	WordManager *wordManager;
 	int i,j;
 
 	//wordManager->word[0] : junk
+	
+	wordManager = (WordManager*) malloc(sizeof(WordManager));
+	wordManager->word = (Word*) malloc(sizeof(Word) * MAX_WORD_NUM);
 	wordManager->wordNum = 0;
-
+	wordManager->wordIdxTable = (WordIdx*) calloc(MAX_HASH_SIZE, sizeof(WordIdx));
+	
 	// get words' wordCnt and create wordIdxTable.
 	while(1) {
 		Word* curWord = &wordManager->word[wordManager->wordNum+1];
@@ -42,6 +62,8 @@ void init_analysis(WordManager* wordManager)
 
 	// create axisIdxTable.
 	create_axisIdxTable(wordManager);
+
+	return wordManager;
 }
 
 void create_axisIdxTable(WordManager *wordManager)
@@ -55,7 +77,7 @@ void create_axisIdxTable(WordManager *wordManager)
 
 	/* 
 	 * 1. select sample words randomly in sorted words 
-	 *	  and create sampleManager.
+	 *	  and create sampleManager->
 	 */
 
 	// sort all word, but using data reference moving for effectiveness
@@ -79,18 +101,18 @@ void create_axisIdxTable(WordManager *wordManager)
 
 	// create sample manager
 	sampleManager = (WordManager*) malloc(sizeof(WordManager));
-	sampleManager.word = (Word*) calloc(sampleNum+1, sizeof(Word));
-	sampleManager.wordNum = sampleManager.axisNum = sampleNum;
-	sampleManager.wordIdxTable = (WordIdx*) calloc(MAX_HASH_SIZE, sizeof(WordIdx));
-	sampleManager.axisIdxTable = (AxisIdx*) calloc(sampleNum+1, sizeof(AxisIdx));
+	sampleManager->word = (Word*) calloc(sampleNum+1, sizeof(Word));
+	sampleManager->wordNum = sampleManager->axisNum = sampleNum;
+	sampleManager->wordIdxTable = (WordIdx*) calloc(MAX_HASH_SIZE, sizeof(WordIdx));
+	sampleManager->axisIdxTable = (AxisIdx*) calloc(sampleNum+1, sizeof(AxisIdx));
 
 	// select sample words randomly
-	for(i=1,j=gap; i <= sampleManager.wordNum; ++i,j+=gap) {
-		sampleManager.word[i] = wordManager->word[sortedWordIdx[j]];
-		sampleManager.word[i].wordVec = (WordVec*) calloc(sampleManager.axisNum+1, sizeof(WordVec));
-		HashIdx hashIdx = check_word_existence(&sampleManager, sampleManager.word[i].wordStr);
-		sampleManager.wordIdxTable[hashIdx] = i;
-		sampleManager.axisIdxTable[i] = i;
+	for(i=1,j=gap; i <= sampleManager->wordNum; ++i,j+=gap) {
+		sampleManager->word[i] = wordManager->word[sortedWordIdx[j]];
+		sampleManager->word[i].wordVec = (WordVec*) calloc(sampleManager->axisNum+1, sizeof(WordVec));
+		HashIdx hashIdx = check_word_existence(&sampleManager, sampleManager->word[i].wordStr);
+		sampleManager->wordIdxTable[hashIdx] = i;
+		sampleManager->axisIdxTable[i] = i;
 	}
 
 
@@ -106,17 +128,18 @@ void create_axisIdxTable(WordManager *wordManager)
 	 */
 	
 	// sort sample words in vector to itself desc order.
-	for(i=1; i <= sampleManager.wordNum; ++i) {
+	for(i=1; i <= sampleManager->wordNum; ++i) {
 		WordIdx wi = sampleWordIdx[i] = i;
-		for(j=i-1; j >= 1 && sampleManager.word[sampleWordIdx[j]].wordVec[axisIdxTable[sampleWordIdx[j]]] < sampleManager.word[wi].wordVec[axisIdxTable[wi]]; --j)
+		for(j=i-1; j >= 1 && sampleManager->word[sampleWordIdx[j]].wordVec[axisIdxTable[sampleWordIdx[j]]] < sampleManager->word[wi].wordVec[axisIdxTable[wi]]; --j)
 			sampleWordIdx[j+1] = sampleWordIdx[j];
 		sampleWordIdx[j+1] = wi;
 	}
 
-	// select axis word.
-	wordManager->axisNum = (sampleManager.wordNum < AXIS_NUM ? sampleManager.wordNum : AXIS_NUM);
+	// create word manager's axisIdxTable
+	wordManager->axisNum = (sampleManager->wordNum < AXIS_NUM ? sampleManager->wordNum : AXIS_NUM);
+	wordManager->axisIdxTable = (AxisIdx*) calloc(wordmanager->axisNum, sizeof(AxisIdx));
 	for(i=1; i <= wordmanager->axisNum; ++i) {
-		WordIdx wordIdx = get_wordIdx(wordManager, sampleManager.word[sampleWordIdx[i]].wordStr);
+		WordIdx wordIdx = get_wordIdx(wordManager, sampleManager->word[sampleWordIdx[i]].wordStr);
 		wordManager->axisIdxTable[i] = wordIdx;
 	}
 
@@ -184,9 +207,9 @@ HashIdx check_word_existence(const WordManager* wordManager, const char* wordStr
 	return hashIdx;
 }
 
-void export_result(WordManager *wordManager)
+void export_result(const WordManager *wordManager, const char* filename)
 {
-	FILE * fp = fopen(OUTPUT_FILE, "wb");
+	FILE * fp = fopen(filename, "wb");
 	int mhs = MAX_HASH_SIZE;
 	int i;
 
@@ -202,15 +225,15 @@ void export_result(WordManager *wordManager)
 		Word *curWord = &wordManager->word[i];
 		fwrite(curWord->wordStr, sizeof(char), MAX_WORD_SIZE, fp);
 		fwrite(&curWord->wordCnt, sizeof(WordCnt), 1, fp);
-		fwrite(curWord->wordVec, sizeof(WordVec), wordManager->axisNum+1, fp);
+		fwrite(curWord->wordVec+1, sizeof(WordVec), wordManager->axisNum, fp);
 	}
-
+/*
 	// export wordIdxTable
 	fwrite(wordManager->wordIdxTable, sizeof(WordIdx), mhs, fp);
 
 	// export axisIdxTable
 	fwrite(wordManager->axisIdxTable, sizeof(AxisIdx), axisNum+1, fp);
-
+*/
 	fclose(fp);
 }
 
