@@ -9,7 +9,8 @@
 #include <termios.h>
 
 #define MAX_WORD_SIZE	100
-#define MAX_HASH_SIZE	(500000 * 20)
+//#define MAX_HASH_SIZE	(500000 * 20)
+#define MAX_HASH_SIZE	(6000000 * 20)
 
 typedef	unsigned int WordCnt;
 typedef double WordVec;

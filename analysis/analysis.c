@@ -172,7 +172,7 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename)
 	// select sample words.
 	fprintf(stdout, "\t\t\t[*] select sample words in sorted words\n");
 	for(i=1,j=wordManager->wordNum * 0.005; i <= sampleManager->wordNum; ++i,j++) {
-		printf("#%d, cnt = %u\n", j, wordManager->word[sortedWordIdx[j]].wordCnt);
+		//fprintf(stderr, "#%d, cnt = %u\n", j, wordManager->word[sortedWordIdx[j]].wordCnt);
 		HashIdx hashIdx;
 		sampleManager->word[i] = wordManager->word[sortedWordIdx[j]];
 		sampleManager->word[i].wordVec = (WordVec*) malloc_wrap((sampleManager->axisNum+1) * sizeof(WordVec));
@@ -271,6 +271,10 @@ bool register_word(WordManager *wordManager, const char* wordStr)
 	} else {
 		wordManager->wordIdxTable[hashIdx] = ++wordManager->wordNum;
 		wordManager->word[wordManager->wordNum].wordCnt = 1;
+		if(wordManager->wordNum+1 > MAX_WORD_NUM) {
+			fprintf(stderr, "[Error] MAX_WORD_NUM is small!\n");
+			exit(1);
+		}
 		return true;
 	}
 }
@@ -451,6 +455,7 @@ void read_word_from_file(FILE *fp, char *wordStr)
 			wordStr[i] = 0;
 			return;
 		}
+		if('A' <= ch && ch <= 'Z') ch -= 'A'-'a';
 		wordStr[i] = ch;
 	}
 
