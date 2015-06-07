@@ -442,25 +442,25 @@ void read_word_from_file(FILE *fp, char *wordStr)
 	//get word from file to wordStr
 	for(i = 0; i < MAX_WORD_SIZE; i++) {
 		ch = fgetc(fp);
-		if(i == 0 && (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n')) {
-			//while((ch = fgetc(fp)) != ' ');
+		if(i == 0 && !('a' <= ch && ch <= 'z') && !('A' <= ch && ch <= 'Z')) { 
+			if(ch == EOF) {
+				wordStr[0] = 0;
+				wordStr[1] = SEP_EOF;
+				return;
+			}		
 			continue;
 		}
-		if(ch == EOF) {
-			wordStr[0] = 0;
-			wordStr[1] = SEP_EOF;
-			return;
-		}
-		if(ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n') {
+		if(ch == ' ' || ch == '\t' || ch == '\n' || ch == EOF) {
 			wordStr[i] = 0;
 			return;
 		}
-		if('A' <= ch && ch <= 'Z') ch -= 'A'-'a';
+
+		if('A' <= ch && ch <= 'Z') ch -= 'A'-'a';	
 		wordStr[i] = ch;
 	}
 
 	//more than MAX_WORD_SIZE, return error separator.
-	while((ch = fgetc(fp)) != ' ' && ch != EOF);
+	while((ch = fgetc(fp)) != ' ' && ch != '\t' && ch != '\n' && ch != EOF);
 	if(ch == EOF) {
 		wordStr[0] = 0;
 		wordStr[1] = SEP_EOF;
