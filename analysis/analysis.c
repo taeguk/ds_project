@@ -135,7 +135,7 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename)
 	// create word manager's axisIdxTable.
 	fprintf(stdout, "\t\t[*] create word manager's axisIdxTable\n");
 	wordManager->axisNum = (sampleManager->wordNum < AXIS_NUM ? sampleManager->wordNum : AXIS_NUM);
-	wordManager->axisIdxTable = (AxisIdx*) calloc_wrap(wordManager->wordNum, sizeof(AxisIdx));
+	wordManager->axisIdxTable = (AxisIdx*) calloc_wrap(wordManager->wordNum+1, sizeof(AxisIdx));
 	for(i=1; i <= wordManager->axisNum; ++i) {
 		WordIdx wordIdx = get_wordIdx(wordManager, sampleManager->word[sampleWordIdx[i]].wordStr);
 		wordManager->axisIdxTable[wordIdx] = i;
@@ -172,6 +172,7 @@ bool register_word(WordManager *wordManager, const char* wordStr)
 		return false;
 	} else {
 		wordManager->wordIdxTable[hashIdx] = ++wordManager->wordNum;
+		wordManager->word[wordManager->wordNum].wordCnt = 1;
 		return true;
 	}
 }
@@ -367,7 +368,7 @@ void export_result(const WordManager *wordManager, const char* filename)
 	fwrite(&mws, sizeof(mws), 1, fp);
 	
 	// export axisIdxTable
-	fwrite(wordManager->axisIdxTable+1, sizeof(AxisIdx), wordManager->axisNum, fp);
+	fwrite(wordManager->axisIdxTable+1, sizeof(AxisIdx), wordManager->wordNum, fp);
 	
 	// export words
 	for(i=1; i <= wordManager->wordNum; ++i) {

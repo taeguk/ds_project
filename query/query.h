@@ -1,6 +1,13 @@
 #ifndef __QUERY_H__
 #define __QUERY_H__
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <termios.h>
+
+#define MAX_WORD_SIZE	100
 #define MAX_HASH_SIZE	(500000 * 20)
 
 typedef	unsigned int WordCnt;
@@ -34,6 +41,11 @@ typedef struct _DataManager {
 	int mws;		// MAX_WORD_SIZE
 } DataManager;
 
+void menu(DataManager* dataManager);
+void print_info_menu(DataManager* dataManager);
+void print_axis_menu(DataManager* dataManager);
+void view_specific_word_menu(DataManager* dataManager);
+
 /*
  * Function Name	: import_data
  * Parameter		: a pointer of file name
@@ -53,20 +65,7 @@ DataManager* import_data(const char* filename);
  *			- using hash_word and collision_hash
  *		2. update data manager's wordIdxTable
  */
-void register_data(DataManager* dataManager, const char* wordStr, WordIdx wordIdx)
-{
-	HashIdx hashIdx = hash_word(wordStr);
-
-	while(dataManager->wordIdxTable[hashIdx] != 0) {
-		Word* curData = &dataManager->word[dataManager->wordIdxTable[hashIdx]];
-		if(!strcmp(curData->wordStr, wordStr)) {
-			return 0;
-		}
-		hashIdx = collision_hash(hashIdx, wordStr);
-	}
-
-	dataManager->wordIdxTable[hashIdx] = wordIdx;
-}
+void register_data(DataManager* dataManager, const char* wordStr, WordIdx wordIdx);
 
 /*
  * Function Name    : hash_word
@@ -123,6 +122,6 @@ void free_dataManager(DataManager *dataManager);
 void* malloc_wrap(size_t size);
 void* calloc_wrap(size_t num, size_t size);
 void* realloc_wrap(void* ptr, size_t size);
-
-
+ 
+int getch(void);
 #endif
