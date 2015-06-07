@@ -1,8 +1,6 @@
 #ifndef __QUERY_H__
 #define __QUERY_H__
 
-#define MAX_WORD_SIZE	100
-
 #define MAX_HASH_SIZE	(500000 * 20)
 
 typedef	unsigned int WordCnt;
@@ -32,9 +30,43 @@ typedef struct _DataManager {
 	int axisNum;
 	WordIdx *wordIdxTable;
 	AxisIdx *axisIdxTable;
-	Data* *ptrAxis;
-	int mws;
+	Data* *ptrAxis;	// array of pointers of axis word data.
+	int mws;		// MAX_WORD_SIZE
 } DataManager;
+
+/*
+ * Function Name	: import_data
+ * Parameter		: a pointer of file name
+ * Return value		: a pointer of data manager
+ * Role				: 
+ *		1. import data from file. 
+ *			- create data manager.
+ */
+DataManager* import_data(const char* filename);
+
+/*
+ * Function Name	: register_data
+ * Parameter		: a pointer of data manager, a pointer of word string, wordIdx
+ * Return value		: void
+ * Role				: 
+ *		1. get hash value of wordStr
+ *			- using hash_word and collision_hash
+ *		2. update data manager's wordIdxTable
+ */
+void register_data(DataManager* dataManager, const char* wordStr, WordIdx wordIdx)
+{
+	HashIdx hashIdx = hash_word(wordStr);
+
+	while(dataManager->wordIdxTable[hashIdx] != 0) {
+		Word* curData = &dataManager->word[dataManager->wordIdxTable[hashIdx]];
+		if(!strcmp(curData->wordStr, wordStr)) {
+			return 0;
+		}
+		hashIdx = collision_hash(hashIdx, wordStr);
+	}
+
+	dataManager->wordIdxTable[hashIdx] = wordIdx;
+}
 
 /*
  * Function Name    : hash_word
@@ -76,14 +108,21 @@ inline AxisIdx get_axisIdx(const DataManager *dataManager, WordIdx wordIdx);
 WordIdx get_wordIdx(const DataManager *dataManager, const char *wordStr);
 
 /*
- * Function Name	: import_data
- * Parameter		: a pointer of data manager, a pointer of file name
+ * Function Name	: free_dataManager
+ * Parameter		: a pointer of data manager
  * Return value		: void
  * Role				: 
- *		1. import data from file. 
- *			- create data manager.
+ *		1. free data manager deeply.
  */
-void import_data(DataManager* dataManager, const char* filename);
+void free_dataManager(DataManager *dataManager);
+
+/*
+ * This is wrapping functions of malloc, calloc, realloc.
+ * Check memory allocation failure.
+ */
+void* malloc_wrap(size_t size);
+void* calloc_wrap(size_t num, size_t size);
+void* realloc_wrap(void* ptr, size_t size);
 
 
 #endif

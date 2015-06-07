@@ -1,3 +1,5 @@
 data/
 test/
 analysis/a.out
+analysis/.*.swp
+query/.*.swp

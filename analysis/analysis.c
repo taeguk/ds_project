@@ -18,6 +18,8 @@ int main(int argc, char *argv[])
 	fprintf(stdout, "[*] exporting result...\n");
 	export_result(wordManager, argv[2]);
 
+	free_wordManager(wordManager);
+
 	return 0;
 }
 
@@ -30,7 +32,7 @@ WordManager* init_analysis(const char* filename)
 	// create word manager.	
 	fprintf(stdout, "\t[*] creating word manager...\n");
 	wordManager = (WordManager*) malloc_wrap(sizeof(WordManager));
-	wordManager->word = (Word*) malloc_wrap(sizeof(Word) * MAX_WORD_NUM);
+	wordManager->word = (Word*) malloc_wrap(sizeof(Word) * (MAX_WORD_NUM+1));
 	wordManager->wordNum = 0;
 	wordManager->wordIdxTable = (WordIdx*) calloc_wrap(MAX_HASH_SIZE, sizeof(WordIdx));
 	
@@ -147,19 +149,6 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename)
 	free_wordManager(sampleManager);
 }
 
-bool register_word(WordManager* wordManager, const char* wordStr)
-{
-	HashIdx hashIdx;
-
-	if((hashIdx=check_word_existence(wordManager, wordStr)) == 0) {
-		++wordManager->word[wordManager->wordNum].wordCnt;
-		return false;
-	} else {
-		wordManager->wordIdxTable[hashIdx] = ++wordManager->wordNum;
-		return true;
-	}
-}
-
 HashIdx check_word_existence(const WordManager* wordManager, const char* wordStr)
 {
 	HashIdx hashIdx = hash_word(wordStr);
@@ -174,46 +163,19 @@ HashIdx check_word_existence(const WordManager* wordManager, const char* wordStr
 	return hashIdx;
 }
 
-void export_result(const WordManager *wordManager, const char* filename)
+bool register_word(WordManager *wordManager, const char* wordStr)
 {
-	FILE * fp = fopen(filename, "wb");
-	int mws = MAX_WORD_SIZE;
-	int i;
+	HashIdx hashIdx;
 
-	// export a number of words
-	fwrite(&wordManager->wordNum, sizeof(wordManager->wordNum), 1, fp);
-	// export a number of axis
-	fwrite(&wordManager->axisNum, sizeof(wordManager->axisNum), 1, fp);
-	// export MAX_WORD_SIZE
-	fwrite(&mws, sizeof(mws), 1, fp);
-
-	// export words
-	for(i=1; i <= wordManager->wordNum; ++i) {
-		Word *curWord = &wordManager->word[i];
-		fwrite(curWord->wordStr, sizeof(char), MAX_WORD_SIZE, fp);
-		fwrite(&curWord->wordCnt, sizeof(WordCnt), 1, fp);
-		fwrite(curWord->wordVec+1, sizeof(WordVec), wordManager->axisNum, fp);
+	if((hashIdx=check_word_existence(wordManager, wordStr)) == 0) {
+		++wordManager->word[wordManager->wordNum].wordCnt;
+		return false;
+	} else {
+		wordManager->wordIdxTable[hashIdx] = ++wordManager->wordNum;
+		return true;
 	}
-
-	// not export wordIdxTable because it is depending on hash functions.
-
-	// export axisIdxTable
-	fwrite(wordManager->axisIdxTable+1, sizeof(AxisIdx), wordManager->axisNum, fp);
-
-	fclose(fp);
 }
 
-void free_wordManager(WordManager *wordManager)
-{
-	int i;
-	for(i=0; i<=wordManager->wordNum; ++i) {
-		free(wordManager->word[i].wordVec);
-	}
-	free(wordManager->word);
-	free(wordManager->wordIdxTable);
-	free(wordManager->axisIdxTable);
-	free(wordManager);
-}
 
 HashIdx hash_word(const char* wordStr)
 {
@@ -228,6 +190,26 @@ HashIdx hash_word(const char* wordStr)
 inline HashIdx collision_hash(HashIdx hashIdx, const char* WordStr)
 {
 	return (hashIdx + 1) % MAX_HASH_SIZE;
+}
+
+inline AxisIdx get_axisIdx(const WordManager *wordManager, WordIdx wordIdx)
+{
+	return wordManager->axisIdxTable[wordIdx];
+}
+
+WordIdx get_wordIdx(const WordManager *wordManager, const char *wordStr)
+{
+	HashIdx hashIdx = hash_word(wordStr);
+
+	while(wordManager->wordIdxTable[hashIdx] != 0) {
+		Word* curWord = &wordManager->word[wordManager->wordIdxTable[hashIdx]];
+		if(!strcmp(curWord->wordStr, wordStr)) {
+			return wordManager->wordIdxTable[hashIdx];
+		}
+		hashIdx = collision_hash(hashIdx, wordStr);
+	}
+
+	return 0;
 }
 
 void calculate_vector(WordManager *wordManager, const char *fileName)
@@ -292,10 +274,47 @@ void update_vector(WordManager *wordManager, WordIdx *rqueue, AxisIdx axisIdx)
 	for(i = 0; i < RELATION_QUEUE_SIZE; i++) { (wordManager->word[rqueue[i]].wordVec[axisIdx])++; }
 }
 
+void init_rqueue(WordIdx *rqueue)
+{
+	int i;
+	for(i = 0; i < RELATION_QUEUE_SIZE; i++) { rqueue[i] = 0; }
+}
+
+inline int next_rqueue_idx(int idx)
+{
+	return ++idx % RELATION_QUEUE_SIZE;
+}
+
+inline int rqueue_mid_idx(int idx)
+{
+	return (++idx + RELATION_QUEUE_SIZE/2) % RELATION_QUEUE_SIZE;
+}
+
 void insert_word_to_rqueue(WordIdx *rqueue, WordIdx wordIdx, int *pIdx)
 {
 	*pIdx = next_rqueue_idx(*pIdx);
 	rqueue[*pIdx] = wordIdx;
+}
+
+inline bool check_separator(char *wordStr)
+{
+	return (get_separator_type(wordStr)) ? true : false;
+}
+
+inline SepType get_separator_type(char *wordStr)
+{
+	return (wordStr[0]) ? NOT_SEP : wordStr[1];
+}
+
+void process_separator(WordManager *wordManager, WordIdx *rqueue, int *pIdx, SepType sepType)
+{
+	int i;
+	//put (size of rqueue / 2) of junk word into rqueue
+	if(sepType == SEP_TEXT || sepType == SEP_EOF) {
+		for(i = 0; i < RELATION_QUEUE_SIZE / 2; i++) {
+			process_relation(wordManager, rqueue, pIdx, 0);
+		}
+	}
 }
 
 void read_word_from_file(FILE *fp, char *wordStr)
@@ -334,61 +353,45 @@ void read_word_from_file(FILE *fp, char *wordStr)
 	}
 }
 
-inline AxisIdx get_axisIdx(const WordManager *wordManager, WordIdx wordIdx)
+void export_result(const WordManager *wordManager, const char* filename)
 {
-	return wordManager->axisIdxTable[wordIdx];
-}
+	FILE * fp = fopen(filename, "wb");
+	int mws = MAX_WORD_SIZE;
+	int i;
 
-WordIdx get_wordIdx(const WordManager *wordManager, const char *wordStr)
-{
-	HashIdx hashIdx = hash_word(wordStr);
-
-	while(wordManager->wordIdxTable[hashIdx] != 0) {
-		Word* curWord = &wordManager->word[wordManager->wordIdxTable[hashIdx]];
-		if(!strcmp(curWord->wordStr, wordStr)) {
-			return wordManager->wordIdxTable[hashIdx];
-		}
-		hashIdx = collision_hash(hashIdx, wordStr);
+	// export a number of words
+	fwrite(&wordManager->wordNum, sizeof(wordManager->wordNum), 1, fp);
+	// export a number of axis
+	fwrite(&wordManager->axisNum, sizeof(wordManager->axisNum), 1, fp);
+	// export MAX_WORD_SIZE
+	fwrite(&mws, sizeof(mws), 1, fp);
+	
+	// export axisIdxTable
+	fwrite(wordManager->axisIdxTable+1, sizeof(AxisIdx), wordManager->axisNum, fp);
+	
+	// export words
+	for(i=1; i <= wordManager->wordNum; ++i) {
+		Word *curWord = &wordManager->word[i];
+		fwrite(curWord->wordStr, sizeof(char), MAX_WORD_SIZE, fp);
+		fwrite(&curWord->wordCnt, sizeof(WordCnt), 1, fp);
+		fwrite(curWord->wordVec+1, sizeof(WordVec), wordManager->axisNum, fp);
 	}
 
-	return 0;
+	// not export wordIdxTable because it is depending on hash functions.
+
+	fclose(fp);
 }
 
-void init_rqueue(WordIdx *rqueue)
+void free_wordManager(WordManager *wordManager)
 {
 	int i;
-	for(i = 0; i < RELATION_QUEUE_SIZE; i++) { rqueue[i] = 0; }
-}
-
-inline int next_rqueue_idx(int idx)
-{
-	return ++idx % RELATION_QUEUE_SIZE;
-}
-
-inline int rqueue_mid_idx(int idx)
-{
-	return (++idx + RELATION_QUEUE_SIZE/2) % RELATION_QUEUE_SIZE;
-}
-
-inline bool check_separator(char *wordStr)
-{
-	return (get_separator_type(wordStr)) ? true : false;
-}
-
-inline SepType get_separator_type(char *wordStr)
-{
-	return (wordStr[0]) ? NOT_SEP : wordStr[1];
-}
-
-void process_separator(WordManager *wordManager, WordIdx *rqueue, int *pIdx, SepType sepType)
-{
-	int i;
-	//put (size of rqueue / 2) of junk word into rqueue
-	if(sepType == SEP_TEXT || sepType == SEP_EOF) {
-		for(i = 0; i < RELATION_QUEUE_SIZE / 2; i++) {
-			process_relation(wordManager, rqueue, pIdx, 0);
-		}
+	for(i=0; i<=wordManager->wordNum; ++i) {
+		free(wordManager->word[i].wordVec);
 	}
+	free(wordManager->word);
+	free(wordManager->wordIdxTable);
+	free(wordManager->axisIdxTable);
+	free(wordManager);
 }
 
 void* malloc_wrap(size_t size)

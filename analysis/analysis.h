@@ -87,23 +87,6 @@ typedef struct _WordManager {
  */
 
 /*
- * This is wrapping functions of malloc, calloc, realloc.
- * Check memory allocation failure.
- */
-void* malloc_wrap(size_t size);
-void* calloc_wrap(size_t num, size_t size);
-void* realloc_wrap(void* ptr, size_t size);
-
-/*
- * Function Name	: free_wordManager
- * Parameter		: a pointer of word manager
- * Return value		: void
- * Role				: 
- *		1. free word manager deeply.
- */
-void free_wordManager(WordManager *wordManager);
-
-/*
  * Function Name	: init_analysis
  * Parameter		: a pointer of input file name string
  * Return value		: a pointer of word manager
@@ -130,20 +113,6 @@ WordManager* init_analysis(const char* filename);
 void create_axisIdxTable(WordManager *wordManager, const char* filename);
 
 /*
- * Function Name	: hash_word
- * Parameter		: a pointer of the word string
- * Return value		: hashIdx of the word
- * Role				: 
- *		1. get hashIdx of the word through hashing the word.
- *			- hash(word) = HashIdx
- * Using function	:
- *		1. 
- * Description		:
- *		none
- */
-HashIdx hash_word(const char* wordStr);
-
-/*
  * Function Name	: check_word_existence
  * Parameter		: a pointer of word manager, a pointer of the word string
  * Return value		: 0 if exist, hashIdx which will inserted if not exist
@@ -168,6 +137,45 @@ HashIdx check_word_existence(const WordManager* wordManager, const char* wordStr
 bool register_word(WordManager* wordManager, const char* wordStr);
 
 /*
+ * Function Name    : hash_word
+ * Parameter        : a pointer of the word string
+ * Return value     : hashIdx of the word
+ * Role             :
+ *      1. get hashIdx of the word through hashing the word.
+ *          - hash(word) = HashIdx
+ */
+HashIdx hash_word(const char* wordStr);
+
+/*
+ * Function Name	: collision_hash
+ * Parameter		: hashIdx, a pointer of word string 
+ * Return value		: next hashIdx
+ * Role				: 
+ *		1. find next hash value when hash collision occurs
+ */
+inline HashIdx collision_hash(HashIdx hashIdx, const char* WordStr);
+
+/*
+ * Function Name    : get_axisIdx
+ * Parameter        : a pointer of word manager, wordIdx
+ * Return value     : axisIdx of the word if word of wordIdx is axis, 0 if not
+ * Role             :
+ *      1. get and return axisIdx of the word from parameter wordIdx
+ */
+inline AxisIdx get_axisIdx(const WordManager *wordManager, WordIdx wordIdx);
+
+/*
+ * Function Name    : get_wordIdx
+ * Parameter        : a pointer of word manager, a pointer of word string
+ * Return value     : wordIdx of the string (return 0 if the word not exist)
+ * Role             :
+ *      1. call hash_word to get hash value of input string.
+ *      2. get and return wordIdx of it by wordIdxTable array if collision does not appear.
+ *      3. if there is collision, call collision_hash and get new wordIdx to return.
+ */
+WordIdx get_wordIdx(const WordManager *wordManager, const char *wordStr);
+
+/*
  * Function Name    : calculate_vector
  * Parameter        : a pointer of word manager, a pointer of input file name string
  * Return value     : void
@@ -183,16 +191,6 @@ bool register_word(WordManager* wordManager, const char* wordStr);
  *      4. normalize the vectors
  */
 void calculate_vector(WordManager *wordManager, const char *fileName);
-
-/*
- * Function Name    : hash_word
- * Parameter        : a pointer of the word string
- * Return value     : hashIdx of the word
- * Role             :
- *      1. get hashIdx of the word through hashing the word.
- *          - hash(word) = HashIdx
- */
-HashIdx hash_word(const char* wordStr);
 
 /*
  * Function Name    : normalize_vector
@@ -226,47 +224,6 @@ void process_relation(WordManager *wordManager, WordIdx *rqueue, int *pIdx, Word
 void update_vector(WordManager *wordManager, WordIdx *rqueue, AxisIdx axisIdx);
 
 /*
- * Function Name    : insert_word_to_rqueue
- * Parameter        : rqueue, wordIdx, a pointer of rear idx of rqueue
- * Return value     : void
- * Role             :
- *      1. insert word to relation queue at pIdx, by WordIdx value.
- *          - rqueue[pIdx] = wordIdx
- *      2. change pIdx value to next index.
- */
-void insert_word_to_rqueue(WordIdx *rqueue, WordIdx wordIdx, int *pIdx);
-
-/*
- * Function Name    : read_word_from_file
- * Parameter        : a file pointer, a pointer of word string
- * Return value     : void
- * Role             :
- *      1. read word from input text file. (token is whitespace)
- *      2. put string to wordStr.
- */
-void read_word_from_file(FILE *fp, char *wordStr);
-
-/*
- * Function Name    : get_axisIdx
- * Parameter        : a pointer of word manager, wordIdx
- * Return value     : axisIdx of the word if word of wordIdx is axis, 0 if not
- * Role             :
- *      1. get and return axisIdx of the word from parameter wordIdx
- */
-inline AxisIdx get_axisIdx(const WordManager *wordManager, WordIdx wordIdx);
-
-/*
- * Function Name    : get_wordIdx
- * Parameter        : a pointer of word manager, a pointer of word string
- * Return value     : wordIdx of the string (return 0 if the word not exist)
- * Role             :
- *      1. call hash_word to get hash value of input string.
- *      2. get and return wordIdx of it by wordIdxTable array if collision does not appear.
- *      3. if there is collision, call collision_hash and get new wordIdx to return.
- */
-WordIdx get_wordIdx(const WordManager *wordManager, const char *wordStr);
-
-/*
  * Function Name    : init_rqueue
  * Parameter        : rqueue
  * Return value     : void
@@ -293,6 +250,17 @@ inline int next_rqueue_idx(int idx);
  *      1. return the middle index of relation queue
  */
 inline int rqueue_mid_idx(int idx);
+
+/*
+ * Function Name    : insert_word_to_rqueue
+ * Parameter        : rqueue, wordIdx, a pointer of rear idx of rqueue
+ * Return value     : void
+ * Role             :
+ *      1. insert word to relation queue at pIdx, by WordIdx value.
+ *          - rqueue[pIdx] = wordIdx
+ *      2. change pIdx value to next index.
+ */
+void insert_word_to_rqueue(WordIdx *rqueue, WordIdx wordIdx, int *pIdx);
 
 /*
  * Function Name    : check_separator
@@ -322,13 +290,14 @@ inline SepType get_separator_type(char *wordStr);
 void process_separator(WordManager *wordManager, WordIdx *rqueue, int *pIdx, SepType sepType);
 
 /*
- * Function Name	: collision_hash
- * Parameter		: hashIdx, a pointer of word string 
- * Return value		: next hashIdx
- * Role				: 
- *		1. find next hash value when hash collision occurs
+ * Function Name    : read_word_from_file
+ * Parameter        : a file pointer, a pointer of word string
+ * Return value     : void
+ * Role             :
+ *      1. read word from input text file. (token is whitespace)
+ *      2. put string to wordStr.
  */
-inline HashIdx collision_hash(HashIdx hashIdx, const char* WordStr);
+void read_word_from_file(FILE *fp, char *wordStr);
 
 /*
  * Function Name	: export_result
@@ -338,5 +307,23 @@ inline HashIdx collision_hash(HashIdx hashIdx, const char* WordStr);
  *		1. export words, its' vector values and etc,...
  */
 void export_result(const WordManager *wordManager, const char* filename);
+
+/*
+ * Function Name	: free_wordManager
+ * Parameter		: a pointer of word manager
+ * Return value		: void
+ * Role				: 
+ *		1. free word manager deeply.
+ */
+void free_wordManager(WordManager *wordManager);
+
+/*
+ * This is wrapping functions of malloc, calloc, realloc.
+ * Check memory allocation failure.
+ */
+void* malloc_wrap(size_t size);
+void* calloc_wrap(size_t num, size_t size);
+void* realloc_wrap(void* ptr, size_t size);
+
 
 #endif
