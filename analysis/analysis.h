@@ -253,7 +253,7 @@ void read_word_from_file(FILE *fp, char *wordStr);
  * Role             :
  *      1. get and return axisIdx of the word from parameter wordIdx
  */
-inline AxisIdx get_axisIdx(WordManager *wordManager, WordIdx wordIdx);
+inline AxisIdx get_axisIdx(const WordManager *wordManager, WordIdx wordIdx);
 
 /*
  * Function Name    : get_wordIdx
@@ -264,7 +264,7 @@ inline AxisIdx get_axisIdx(WordManager *wordManager, WordIdx wordIdx);
  *      2. get and return wordIdx of it by wordIdxTable array if collision does not appear.
  *      3. if there is collision, call collision_hash and get new wordIdx to return.
  */
-WordIdx get_wordIdx(WordManager *wordManager, const char *wordStr);
+WordIdx get_wordIdx(const WordManager *wordManager, const char *wordStr);
 
 /*
  * Function Name    : init_rqueue
@@ -326,8 +326,7 @@ void process_separator(WordManager *wordManager, WordIdx *rqueue, int *pIdx, Sep
  * Parameter		: hashIdx, a pointer of word string 
  * Return value		: next hashIdx
  * Role				: 
- *		1. 
- *			- 
+ *		1. find next hash value when hash collision occurs
  */
 inline HashIdx collision_hash(HashIdx hashIdx, const char* WordStr);
 

@@ -37,6 +37,45 @@ typedef struct _DataManager {
 } DataManager;
 
 /*
+ * Function Name    : hash_word
+ * Parameter        : a pointer of the word string
+ * Return value     : hashIdx of the word
+ * Role             :
+ *      1. get hashIdx of the word through hashing the word.
+ *          - hash(word) = HashIdx
+ */
+HashIdx hash_word(const char* wordStr);
+
+/*
+ * Function Name	: collision_hash
+ * Parameter		: hashIdx, a pointer of word string 
+ * Return value		: next hashIdx
+ * Role				: 
+ *		1. find next hash value when hash collision occurs
+ */
+inline HashIdx collision_hash(HashIdx hashIdx, const char* WordStr);
+
+/*
+ * Function Name    : get_axisIdx
+ * Parameter        : a pointer of data manager, wordIdx
+ * Return value     : axisIdx of the word if word of wordIdx is axis, 0 if not
+ * Role             :
+ *      1. get and return axisIdx of the word from parameter wordIdx
+ */
+inline AxisIdx get_axisIdx(const DataManager *dataManager, WordIdx wordIdx);
+
+/*
+ * Function Name    : get_wordIdx
+ * Parameter        : a pointer of data manager, a pointer of word string
+ * Return value     : wordIdx of the string (return 0 if the word not exist)
+ * Role             :
+ *      1. call hash_word to get hash value of input string.
+ *      2. get and return wordIdx of it by wordIdxTable array if collision does not appear.
+ *      3. if there is collision, call collision_hash and get new wordIdx to return.
+ */
+WordIdx get_wordIdx(const DataManager *dataManager, const char *wordStr);
+
+/*
  * Function Name	: import_data
  * Parameter		: a pointer of data manager, a pointer of file name
  * Return value		: void

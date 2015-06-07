@@ -215,6 +215,16 @@ void free_wordManager(WordManager *wordManager)
 	free(wordManager);
 }
 
+HashIdx hash_word(const char* wordStr)
+{
+	HashIdx hash = 2729;
+	const char *str = wordStr;
+    int c;
+    while(c = *str++)
+        hash = (hash * 585) + c;
+    return hash % MAX_HASH_SIZE;
+}
+
 inline HashIdx collision_hash(HashIdx hashIdx, const char* WordStr)
 {
 	return (hashIdx + 1) % MAX_HASH_SIZE;
@@ -245,16 +255,6 @@ void calculate_vector(WordManager *wordManager, const char *fileName)
 	}
 	fclose(fp);
 	normalize_vector(wordManager);
-}
-
-HashIdx hash_word(const char* wordStr)
-{
-	HashIdx hash = 2729;
-	const char *str = wordStr;
-    int c;
-    while(c = *str++)
-        hash = (hash * 585) + c;
-    return hash % MAX_HASH_SIZE;
 }
 
 void normalize_vector(WordManager *wordManager)
@@ -334,12 +334,12 @@ void read_word_from_file(FILE *fp, char *wordStr)
 	}
 }
 
-inline AxisIdx get_axisIdx(WordManager *wordManager, WordIdx wordIdx)
+inline AxisIdx get_axisIdx(const WordManager *wordManager, WordIdx wordIdx)
 {
 	return wordManager->axisIdxTable[wordIdx];
 }
 
-WordIdx get_wordIdx(WordManager *wordManager, const char *wordStr)
+WordIdx get_wordIdx(const WordManager *wordManager, const char *wordStr)
 {
 	HashIdx hashIdx = hash_word(wordStr);
 
