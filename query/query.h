@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <termios.h>
@@ -124,4 +125,7 @@ void* calloc_wrap(size_t num, size_t size);
 void* realloc_wrap(void* ptr, size_t size);
  
 int getch(void);
+inline void flush_stdin(void);
+
+
 #endif

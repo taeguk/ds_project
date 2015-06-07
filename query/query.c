@@ -24,8 +24,12 @@ void menu(DataManager* dataManager)
     char ch;
     int endFlag = 0;
     do {
+		system("clear");
+		printf("\t************** ds_project **************\n"
+			   "\t\t                    - kwon & koo\n"
+				);
         printf("\n"
-               "\t\tMenu\n"
+               //"\t Menu\n\n"
                "\t1. Print information of input data file.\n"
                "\t2. Print information of axis words.\n"
                "\t3. View information of specific word.\n"
@@ -33,12 +37,15 @@ void menu(DataManager* dataManager)
                "\tpress q to exit. ");
         ch = getch();
         if(ch == '1') {
+			system("clear");
             print_info_menu(dataManager);
         }
         if(ch == '2') {
+			system("clear");
             print_axis_menu(dataManager);
         }
         if(ch == '3') {
+			system("clear");
             view_specific_word_menu(dataManager);
         }
         if(ch == 'q' || ch == 'Q') {
@@ -46,29 +53,55 @@ void menu(DataManager* dataManager)
         }
     } while(!endFlag);
 	puts("");
+	system("clear");
 }
 
 void print_info_menu(DataManager* dataManager)
 {
     printf("\n"
-           "\t\tInformation of input data file.\n\n"
+           "\t\tInformation of input data file\n\n"
            "\tNumber of different words : %d\n"
            "\tNumber of axis words : %d\n",
            dataManager->dataNum, dataManager->axisNum);
+	printf("\n\t[*] Print information of input data file finish! ");
+	getch();
+	puts("");
 }
 
 void print_axis_menu(DataManager* dataManager)
 {
-    int i;
+	struct winsize w;
+	char ch;
+	bool flag = true;
+    int i,j;
     printf("\n"
-           "\t\tInformation of axis words.\n");
-    for(i = 1; i <= dataManager->axisNum; i++) {
+           "\t\tInformation of axis words\n");
+    for(i = 1,j = 1; i <= dataManager->axisNum; i++) {
         printf("\n"
                "\tNo. %d\n"
                "\tWord : %s\n"
-               "\tCount : %u\n",
-               i, dataManager->ptrAxis[i]->wordStr, dataManager->ptrAxis[i]->wordCnt);
+               "\tCount : %u\n"
+			   "\tVector to itself : %.10f\n",
+               i, dataManager->ptrAxis[i]->wordStr, dataManager->ptrAxis[i]->wordCnt,
+			   dataManager->ptrAxis[i]->wordVec[i]);
+		if(i >= j) {
+			ch = getch();
+			if(ch == ' ') {
+				system("clear");
+				ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);	
+				j = i + w.ws_row / 5;
+			} else if(ch == 'q') {
+				flag = false;
+				break;
+			}
+		}
     }
+	if(flag)
+		printf("\n\t[*] Print information of axis words finish! ");
+	else
+		printf("\n\t[!] Print information of axis words stoped! ");
+	getch();
+	puts("");
 }
 
 void view_specific_word_menu(DataManager* dataManager)
@@ -78,10 +111,16 @@ void view_specific_word_menu(DataManager* dataManager)
     char inputBuffer[MAX_WORD_SIZE];
     WordIdx wordIdx;
     printf("\n"
-           "\t\tInformation of specific word\n"
+           "\t\tInformation of specific word\n\n"
            "\tInput word : ");
     scanf("%s", inputBuffer);
+	flush_stdin();
     wordIdx = get_wordIdx(dataManager, inputBuffer);
+	if(wordIdx == 0) {
+		printf("\n\t[!] %s does not exist! ", inputBuffer);
+		getch();
+		return;
+	}
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);	
     maxPrint = w.ws_col / (10 + 3) - 1;
 	if(maxPrint < 1) maxPrint = 1;
@@ -101,7 +140,10 @@ void view_specific_word_menu(DataManager* dataManager)
 		}
         printf("%.10lf ", dataManager->data[wordIdx].wordVec[i]);
     }
-    printf("\n");
+    printf("\n\n");
+	printf("\t[*] Print information of specific word finish! ");
+	getch();
+	puts("");
 }
 
 DataManager* import_data(const char* filename)
@@ -261,4 +303,10 @@ int getch(void)
 	ch = getchar();
 	tcsetattr( STDIN_FILENO, TCSANOW, &oldt );
 	return ch;
+}
+
+inline void flush_stdin(void)
+{
+	int c;
+	while((c = getchar()) != '\n' && c != EOF);
 }
