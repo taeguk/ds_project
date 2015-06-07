@@ -5,14 +5,15 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdbool.h>
+#include <time.h>
 
-#define SIMULATION_NUM	1000
+#define SIMULATION_NUM	10000
 
 #define MAX_WORD_SIZE	100
 
 #define MAX_HASH_SIZE	(MAX_WORD_NUM * 20)
 #define MAX_WORD_NUM	500000
-#define AXIS_NUM		200
+#define AXIS_NUM		500
 
 #define RELATION_QUEUE_SIZE (10 * 2 + 1)
 
@@ -114,14 +115,14 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename);
 
 /*
  * Function Name	: check_word_existence
- * Parameter		: a pointer of word manager, a pointer of the word string
- * Return value		: 0 if exist, hashIdx which will inserted if not exist
+ * Parameter		: a pointer of word manager, a pointer of the word string, a pointer of hashIdx which will be stored hash value of word.
+ * Return value		: true if exist, false if not exist
  * Role				: 
  *		1. get hashIdx of the word using hash_word.
  *			- hash(word) = hashIdx
  *		2. check word's existence using wordIdxTable.
  */
-HashIdx check_word_existence(const WordManager* wordManager, const char* wordStr);
+bool check_word_existence(const WordManager* wordManager, const char* wordStr, HashIdx *pHashIdx);
 
 /*
  * Function Name	: register_word

@@ -3,20 +3,35 @@
 int main(int argc, char *argv[])
 {
 	WordManager* wordManager;
+	time_t wStart, wEnd, start, end;
 
 	if(argc != 3) {
 		fprintf(stderr, "[Usage] %s <INPUT_FILE> <OUTPUT_FILE>\n", argv[0]);
 		return 1;
 	}
 
+	wStart = clock();
+
 	fprintf(stdout, "[*] initializing for analysis...\n");
+	start = clock();
 	wordManager = init_analysis(argv[1]);
+	end = clock();
+	fprintf(stdout, "[T] initializing : %lf sec\n\n", (double)(end-start)/CLOCKS_PER_SEC);
 
 	fprintf(stdout, "[*] calculating vector...\n");
+	start = clock();
 	calculate_vector(wordManager, argv[1]);
+	end = clock();
+	fprintf(stdout, "[T] calculating vector : %lf sec\n\n", (double)(end-start)/CLOCKS_PER_SEC);
 
 	fprintf(stdout, "[*] exporting result...\n");
+	start = clock();
 	export_result(wordManager, argv[2]);
+	end = clock();
+	fprintf(stdout, "[T] exporting result : %lf sec\n\n", (double)(end-start)/CLOCKS_PER_SEC);
+
+	wEnd = clock();
+	fprintf(stdout, "[T] all progress : %lf sec\n\n", (double)(wEnd-wStart)/CLOCKS_PER_SEC);
 
 	free_wordManager(wordManager);
 
@@ -27,10 +42,11 @@ WordManager* init_analysis(const char* filename)
 {
 	FILE * fp = fopen(filename, "r");
 	WordManager *wordManager;
+	time_t start, end;
 	int i,j;
 
 	// create word manager.	
-	fprintf(stdout, "\t[*] creating word manager...\n");
+	start = clock();
 	wordManager = (WordManager*) malloc_wrap(sizeof(WordManager));
 	wordManager->word = (Word*) malloc_wrap(sizeof(Word) * (MAX_WORD_NUM+1));
 	wordManager->wordNum = 0;
@@ -48,42 +64,83 @@ WordManager* init_analysis(const char* filename)
 			break;
 		}
 	}
-	fprintf(stdout, "\t\t[*] the number of words = %d\n", wordManager->wordNum);
-
+	fprintf(stdout, "\t\t[I] the number of words = %d\n", wordManager->wordNum);
 	fclose(fp);
+	end = clock();
+	fprintf(stdout, "\t[T] counting words and creating wordIdxTable : %lf sec\n", (double)(end-start)/CLOCKS_PER_SEC);
 
 	// create axisIdxTable.
-	fprintf(stdout, "\t[*] creating axisIdxTable...\n");
+	start = clock();
+	fprintf(stdout, "\t[*] selecting axis words and creating axisIdxTable...\n");
 	create_axisIdxTable(wordManager, filename);
+	end = clock();
+	fprintf(stdout, "\t[T] selecting axis words and creating axisIdxTable : %lf sec\n", (double)(end-start)/CLOCKS_PER_SEC);
 
 	return wordManager;
 }
 
 void create_axisIdxTable(WordManager *wordManager, const char* filename)
 {
-	WordIdx *sortedWordIdx;
+	WordIdx *sortedWordIdx, *heap;
 	WordManager *sampleManager;
 	WordIdx sampleWordIdx[SIMULATION_NUM+1];
+	time_t start, end;
 
 	int sampleNum, gap;
-	int i,j;
+	int i,j,p,c,tmp;
 
 	/* 
-	 * 1. select sample words randomly in sorted words 
+	 * 1. select sample words in sorted words 
 	 *	  and create sampleManager.
 	 */
-	fprintf(stdout, "\t[*] creating axisIdxTable... [stage 1]\n");
+	fprintf(stdout, "\t\t[*] creating sample manager... [stage 1]\n");
+	
 	// sort all words, but using data reference moving for effectiveness.
-	// using insertion sort.
-	fprintf(stdout, "\t\t[*] sort all words\n");
+	// using heap sort.
+	start = clock();
+	fprintf(stdout, "\t\t\t[*] sorting all words...\n");
 	sortedWordIdx = (WordIdx*) malloc_wrap(sizeof(WordIdx) * (wordManager->wordNum+1));
+	heap = sortedWordIdx;
+
+	// construct min-heap.
 	for(i=1; i <= wordManager->wordNum; ++i) {
-		int wi = sortedWordIdx[i] = i;
-		for(j=i-1; j >= 1 && wordManager->word[sortedWordIdx[j]].wordCnt > wordManager->word[wi].wordCnt; --j)
-			sortedWordIdx[j+1] = sortedWordIdx[j];
-		sortedWordIdx[j+1] = wi;
+		c = i;
+		p = c / 2;
+		while(p != 0 && wordManager->word[i].wordCnt < wordManager->word[heap[p]].wordCnt) {
+			heap[c] = heap[p];
+			c = p;
+			p /= 2;
+		}
+		heap[c] = i;
 	}
 
+	// sort desc.
+	for(i=wordManager->wordNum; i > 1; --i) {
+		tmp = heap[i];
+		heap[i] = heap[1];
+		heap[1] = tmp;
+		tmp = heap[1];
+		p = 1;
+		if(2*p+1 >= i) {
+			c = 2*p;
+		} else {
+			c = (wordManager->word[heap[2*p]].wordCnt < wordManager->word[heap[2*p+1]].wordCnt ? (2*p) : (2*p+1));
+		}
+		while(c < i && wordManager->word[tmp].wordCnt > wordManager->word[heap[c]].wordCnt) {
+			heap[p] = heap[c];
+			p = c;
+			if(2*p+1 >= i) {
+				c = 2*p;
+			} else {
+				c = (wordManager->word[heap[2*p]].wordCnt < wordManager->word[heap[2*p+1]].wordCnt ? (2*p) : (2*p+1));
+			}
+		}
+		heap[p] = tmp;
+	}
+
+	end = clock();
+	fprintf(stdout, "\t\t\t[T] sorting all words : %lf sec\n", (double)(end-start)/CLOCKS_PER_SEC);
+	
 	// calculate a index gap.
 	gap = wordManager->wordNum / SIMULATION_NUM;
 	if(gap == 0) {
@@ -92,9 +149,9 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename)
 	} else {
 		sampleNum = SIMULATION_NUM;
 	}
+	gap = 1;
 
 	// create sample manager.
-	fprintf(stdout, "\t\t[*] create sampleManager\n");
 	sampleManager = (WordManager*) malloc_wrap(sizeof(WordManager));
 	sampleManager->word = (Word*) calloc_wrap(sampleNum+1, sizeof(Word));
 	sampleManager->wordNum = sampleManager->axisNum = sampleNum;
@@ -102,38 +159,47 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename)
 	sampleManager->axisIdxTable = (AxisIdx*) calloc_wrap(sampleNum+1, sizeof(AxisIdx));
 	sampleManager->word[0].wordVec = (WordVec*) calloc_wrap(sampleNum+1, sizeof(WordVec));
 
-	// select sample words randomly.
-	fprintf(stdout, "\t\t[*] select sample words ramdomly\n");
+	// select sample words.
+	fprintf(stdout, "\t\t\t[*] select sample words in sorted words\n");
 	for(i=1,j=gap; i <= sampleManager->wordNum; ++i,j+=gap) {
+		//printf("#%d, cnt = %u\n", j, wordManager->word[sortedWordIdx[j]].wordCnt);
 		HashIdx hashIdx;
 		sampleManager->word[i] = wordManager->word[sortedWordIdx[j]];
 		sampleManager->word[i].wordVec = (WordVec*) calloc_wrap(sampleManager->axisNum+1, sizeof(WordVec));
-		hashIdx = check_word_existence(sampleManager, sampleManager->word[i].wordStr);
+		check_word_existence(sampleManager, sampleManager->word[i].wordStr, &hashIdx);
 		sampleManager->wordIdxTable[hashIdx] = i;
 		sampleManager->axisIdxTable[i] = i;
 	}
 
+	free(sortedWordIdx);
+
 	/*
 	 * 2. calculate vector of samples.
 	 */
-	fprintf(stdout, "\t[*] creating axisIdxTable... [stage 2]\n");
+	fprintf(stdout, "\t\t[*] simulation using sample manager... [stage 2]\n");
+	start = clock();
 	calculate_vector(sampleManager, filename);
+	end = clock();
+	fprintf(stdout, "\t\t[T] simulation : %lf sec\n", (double)(end-start)/CLOCKS_PER_SEC);
 
 	/*
 	 * 3. select axis words in samples.
 	 */
-	fprintf(stdout, "\t[*] creating axisIdxTable... [stage 3]\n");	
+	fprintf(stdout, "\t\t[*] creating axisIdxTable... [stage 3]\n");	
 	// sort sample words in vector to itself desc order.
-	fprintf(stdout, "\t\t[*] sort sample words\n");
+	fprintf(stdout, "\t\t\t[*] sorting sample words...\n");
+	start = clock();
 	for(i=1; i <= sampleManager->wordNum; ++i) {
 		WordIdx wi = sampleWordIdx[i] = i;
 		for(j=i-1; j >= 1 && sampleManager->word[sampleWordIdx[j]].wordVec[sampleWordIdx[j]] < sampleManager->word[wi].wordVec[wi]; --j)
 			sampleWordIdx[j+1] = sampleWordIdx[j];
 		sampleWordIdx[j+1] = wi;
 	}
+	end = clock();
+	fprintf(stdout, "\t\t\t[T] sorting sample words : %lf sec\n", (double)(end-start)/CLOCKS_PER_SEC);
 
 	// create word manager's axisIdxTable.
-	fprintf(stdout, "\t\t[*] create word manager's axisIdxTable\n");
+	fprintf(stdout, "\t\t\t[*] create word manager's axisIdxTable...\n");
 	wordManager->axisNum = (sampleManager->wordNum < AXIS_NUM ? sampleManager->wordNum : AXIS_NUM);
 	wordManager->axisIdxTable = (AxisIdx*) calloc_wrap(wordManager->wordNum+1, sizeof(AxisIdx));
 	for(i=1; i <= wordManager->axisNum; ++i) {
@@ -149,26 +215,28 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename)
 	free_wordManager(sampleManager);
 }
 
-HashIdx check_word_existence(const WordManager* wordManager, const char* wordStr)
+bool check_word_existence(const WordManager* wordManager, const char* wordStr, HashIdx *pHashIdx)
 {
 	HashIdx hashIdx = hash_word(wordStr);
 
 	while(wordManager->wordIdxTable[hashIdx] != 0) {
 		Word* curWord = &wordManager->word[wordManager->wordIdxTable[hashIdx]];
 		if(!strcmp(curWord->wordStr, wordStr)) {
-			return 0;
+			*pHashIdx = hashIdx;
+			return true;
 		}
 		hashIdx = collision_hash(hashIdx, wordStr);
 	}
-	return hashIdx;
+	*pHashIdx = hashIdx;
+	return false;
 }
 
 bool register_word(WordManager *wordManager, const char* wordStr)
 {
 	HashIdx hashIdx;
 
-	if((hashIdx=check_word_existence(wordManager, wordStr)) == 0) {
-		++wordManager->word[wordManager->wordNum].wordCnt;
+	if(check_word_existence(wordManager, wordStr, &hashIdx)) {
+		++wordManager->word[get_wordIdx(wordManager, wordStr)].wordCnt;
 		return false;
 	} else {
 		wordManager->wordIdxTable[hashIdx] = ++wordManager->wordNum;
