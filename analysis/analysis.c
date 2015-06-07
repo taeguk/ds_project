@@ -84,6 +84,7 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename)
 	WordIdx *sortedWordIdx, *heap;
 	WordManager *sampleManager;
 	WordIdx sampleWordIdx[SIMULATION_NUM+1];
+	WordVec *rate;
 	time_t start, end;
 
 	int sampleNum, gap;
@@ -142,33 +143,43 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename)
 	fprintf(stdout, "\t\t\t[T] sorting all words : %lf sec\n", (double)(end-start)/CLOCKS_PER_SEC);
 	
 	// calculate a index gap.
-	gap = wordManager->wordNum / SIMULATION_NUM;
+/*	
+	gap = (wordManager->wordNum/2) / SIMULATION_NUM;
 	if(gap == 0) {
 		gap = 1;
 		sampleNum = wordManager->wordNum;
 	} else {
 		sampleNum = SIMULATION_NUM;
 	}
-	gap = 1;
-
+*/
+	if(wordManager->wordNum/16 < SIMULATION_NUM) {
+		sampleNum = wordManager->wordNum/16;
+		if(sampleNum == 0) sampleNum = 1;
+	} else {
+		sampleNum = SIMULATION_NUM;
+	}
+	fprintf(stdout, "\t\t\t[I] the number of samples = %d\n", sampleNum);
+	
 	// create sample manager.
 	sampleManager = (WordManager*) malloc_wrap(sizeof(WordManager));
 	sampleManager->word = (Word*) calloc_wrap(sampleNum+1, sizeof(Word));
 	sampleManager->wordNum = sampleManager->axisNum = sampleNum;
 	sampleManager->wordIdxTable = (WordIdx*) calloc_wrap(MAX_HASH_SIZE, sizeof(WordIdx));
 	sampleManager->axisIdxTable = (AxisIdx*) calloc_wrap(sampleNum+1, sizeof(AxisIdx));
-	sampleManager->word[0].wordVec = (WordVec*) calloc_wrap(sampleNum+1, sizeof(WordVec));
+	sampleManager->word[0].wordVec = (WordVec*) malloc_wrap((sampleNum+1) * sizeof(WordVec));
+	sampleManager->ptrAxis = (Word**) calloc_wrap(sampleNum+1, sizeof(Word*));
 
 	// select sample words.
 	fprintf(stdout, "\t\t\t[*] select sample words in sorted words\n");
-	for(i=1,j=gap; i <= sampleManager->wordNum; ++i,j+=gap) {
-		//printf("#%d, cnt = %u\n", j, wordManager->word[sortedWordIdx[j]].wordCnt);
+	for(i=1,j=wordManager->wordNum * 0.005; i <= sampleManager->wordNum; ++i,j++) {
+		printf("#%d, cnt = %u\n", j, wordManager->word[sortedWordIdx[j]].wordCnt);
 		HashIdx hashIdx;
 		sampleManager->word[i] = wordManager->word[sortedWordIdx[j]];
-		sampleManager->word[i].wordVec = (WordVec*) calloc_wrap(sampleManager->axisNum+1, sizeof(WordVec));
+		sampleManager->word[i].wordVec = (WordVec*) malloc_wrap((sampleManager->axisNum+1) * sizeof(WordVec));
 		check_word_existence(sampleManager, sampleManager->word[i].wordStr, &hashIdx);
 		sampleManager->wordIdxTable[hashIdx] = i;
 		sampleManager->axisIdxTable[i] = i;
+		sampleManager->ptrAxis[i] = &sampleManager->word[i];
 	}
 
 	free(sortedWordIdx);
@@ -186,30 +197,49 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename)
 	 * 3. select axis words in samples.
 	 */
 	fprintf(stdout, "\t\t[*] creating axisIdxTable... [stage 3]\n");	
+
+	// calculate sample words' rates of vector to itself.
+	fprintf(stdout, "\t\t\t[*] calculating sample words' rates of vector to itself...\n");
+	start = clock();
+	rate = (WordVec*) malloc_wrap((sampleManager->axisNum+1) * sizeof(WordVec));
+	for(i=1; i <= sampleManager->wordNum; ++i) {
+		rate[i] = 0;
+		for(j=1; j <= sampleManager->axisNum; ++j) {
+			rate[i] += sampleManager->word[i].wordVec[j];
+		}
+		rate[i] = sampleManager->word[i].wordVec[i] / rate[i];
+	}
+	end = clock();
+	fprintf(stdout, "\t\t\t[T] calculating sample words' rates of vector to itself : %lf sec\n", (double)(end-start)/CLOCKS_PER_SEC);
+	
 	// sort sample words in vector to itself desc order.
 	fprintf(stdout, "\t\t\t[*] sorting sample words...\n");
 	start = clock();
 	for(i=1; i <= sampleManager->wordNum; ++i) {
 		WordIdx wi = sampleWordIdx[i] = i;
-		for(j=i-1; j >= 1 && sampleManager->word[sampleWordIdx[j]].wordVec[sampleWordIdx[j]] < sampleManager->word[wi].wordVec[wi]; --j)
+		for(j=i-1; j >= 1 && rate[sampleWordIdx[j]] < rate[wi]; --j)
 			sampleWordIdx[j+1] = sampleWordIdx[j];
 		sampleWordIdx[j+1] = wi;
 	}
 	end = clock();
 	fprintf(stdout, "\t\t\t[T] sorting sample words : %lf sec\n", (double)(end-start)/CLOCKS_PER_SEC);
 
+	free(rate);
+
 	// create word manager's axisIdxTable.
 	fprintf(stdout, "\t\t\t[*] create word manager's axisIdxTable...\n");
 	wordManager->axisNum = (sampleManager->wordNum < AXIS_NUM ? sampleManager->wordNum : AXIS_NUM);
 	wordManager->axisIdxTable = (AxisIdx*) calloc_wrap(wordManager->wordNum+1, sizeof(AxisIdx));
+	wordManager->ptrAxis = (Word**) calloc_wrap(wordManager->axisNum+1, sizeof(Word*));
 	for(i=1; i <= wordManager->axisNum; ++i) {
 		WordIdx wordIdx = get_wordIdx(wordManager, sampleManager->word[sampleWordIdx[i]].wordStr);
 		wordManager->axisIdxTable[wordIdx] = i;
+		wordManager->ptrAxis[i] = &wordManager->word[wordIdx];
 	}
 
-	wordManager->word[0].wordVec = (WordVec*) calloc_wrap(wordManager->axisNum+1, sizeof(WordVec));
+	wordManager->word[0].wordVec = (WordVec*) malloc_wrap((wordManager->axisNum+1) * sizeof(WordVec));
 	for(i=1; i <= wordManager->wordNum; ++i) {
-		wordManager->word[i].wordVec = (WordVec*) calloc_wrap(wordManager->axisNum+1, sizeof(WordVec));
+		wordManager->word[i].wordVec = (WordVec*) malloc_wrap((wordManager->axisNum+1) * sizeof(WordVec));
 	}
 
 	free_wordManager(sampleManager);
@@ -289,6 +319,19 @@ void calculate_vector(WordManager *wordManager, const char *fileName)
 	SepType sepType;
 	WordIdx wordIdx;
 	int idx;
+	time_t start, end;
+	int i,j;
+	
+	// initializing vectors
+	fprintf(stdout, "\t\t\t[*] initializing vectors...\n");
+	start = clock();
+	for(i=1; i <= wordManager->wordNum; ++i) {
+		for(j=1; j <= wordManager->axisNum; ++j) {
+			wordManager->word[i].wordVec[j] = 0;
+		}
+	}
+	end = clock();
+	fprintf(stdout, "\t\t\t[T] initializing vectors : %lf sec\n", (double)(end-start)/CLOCKS_PER_SEC);
 
 	fp = fopen(fileName, "r");
 	init_rqueue(rqueue);
@@ -316,6 +359,7 @@ void normalize_vector(WordManager *wordManager)
 		//get size
 		size = 0;
 		for(j = 1; j <= (wordManager->axisNum); j++) { //for all components
+			wordManager->word[i].wordVec[j] /= wordManager->ptrAxis[j]->wordCnt;
 			size += (wordManager->word[i].wordVec[j]) * (wordManager->word[i].wordVec[j]);
 		}
 
@@ -460,6 +504,7 @@ void free_wordManager(WordManager *wordManager)
 	free(wordManager->word);
 	free(wordManager->wordIdxTable);
 	free(wordManager->axisIdxTable);
+	free(wordManager->ptrAxis);
 	free(wordManager);
 }
 

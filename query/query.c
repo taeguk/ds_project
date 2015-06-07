@@ -33,6 +33,8 @@ void menu(DataManager* dataManager)
                "\t1. Print information of input data file.\n"
                "\t2. Print information of axis words.\n"
                "\t3. View information of specific word.\n"
+               "\t4. Calculate distance between two words.\n"
+               "\t5. Calculate highly related words list.\n"
                "\n"
                "\tpress q to exit. ");
         ch = getch();
@@ -47,6 +49,14 @@ void menu(DataManager* dataManager)
         if(ch == '3') {
 			system("clear");
             view_specific_word_menu(dataManager);
+        }        
+		if(ch == '4') {
+			system("clear");
+			distance_between_words_menu(dataManager);
+        }        
+		if(ch == '5') {
+			system("clear");
+            get_related_words_menu(dataManager);
         }
         if(ch == 'q' || ch == 'Q') {
             endFlag = 1;
@@ -145,6 +155,102 @@ void view_specific_word_menu(DataManager* dataManager)
 	getch();
 	puts("");
 }
+
+
+double dot_product (DataManager* dataManager, WordIdx wordIdx1, WordIdx wordIdx2)
+{
+    int i;
+    double result = 0;
+    for(i = 1; i <= dataManager->axisNum; i++) {
+        result += dataManager->data[wordIdx1].wordVec[i] * dataManager->data[wordIdx2].wordVec[i];
+    }
+    return result;
+}
+
+void distance_between_words_menu(DataManager* dataManager)
+{
+    char inputBuffer1[MAX_WORD_SIZE], inputBuffer2[MAX_WORD_SIZE];
+    WordIdx wordIdx1, wordIdx2;
+
+    printf("\n"
+           "\t\tDistance between two words.\n"
+           "\tInput word1 : ");
+    scanf("%s", inputBuffer1);
+    flush_stdin();
+    printf("\tInput word2 : ");
+    scanf("%s", inputBuffer2);
+    flush_stdin();
+
+    wordIdx1 = get_wordIdx(dataManager, inputBuffer1);
+    wordIdx2 = get_wordIdx(dataManager, inputBuffer2);
+
+    //if(wordIdx1 == 0 || wordIdx2 == 0) {
+    //  return;
+    //}
+    printf("distance : %.6lf\n", dot_product(dataManager, wordIdx1, wordIdx2));
+
+	getch();
+}
+
+void get_related_words_menu(DataManager* dataManager)
+{
+    int printNum = 10;
+    int i, j, k;
+    Data* *pHighlyRelatedWords;
+    double *highlyRelatedVal;
+    double nowVal;
+    WordIdx wordIdx;
+    char inputBuffer[MAX_WORD_SIZE];
+
+    printf("\n"
+           "\t\tPrint highly related words list.\n"
+           "\tInput word : ");
+    scanf("%s", inputBuffer);
+    flush_stdin();
+    //printf("\tInput number of list : ");
+    //scanf("%d", &printNum);
+	
+	wordIdx = get_wordIdx(dataManager, inputBuffer);
+	if(wordIdx == 0) {
+		printf("\n\t[!] %s does not exist! ", inputBuffer);
+		getch();
+		return;
+	}
+
+    pHighlyRelatedWords = (Data **)malloc_wrap(sizeof(Data *) * printNum);
+    highlyRelatedVal = (double *)malloc_wrap(sizeof(double) * printNum);
+
+    for(i = 0; i < printNum; i++) {
+        pHighlyRelatedWords[i] = 0;
+        highlyRelatedVal[i] = -1;
+    }
+
+    for(i = 1; i <= dataManager->dataNum; i++) {
+        if(i == wordIdx) continue;
+        nowVal = dot_product(dataManager, wordIdx, i);
+        for(j = 0; j < printNum; j++) {
+            if(highlyRelatedVal[j] < nowVal) break;
+        }
+        if(j == printNum) continue;
+        for(k = printNum - 2; k >= j; k--) {
+            pHighlyRelatedWords[k + 1] = pHighlyRelatedWords[k];
+            highlyRelatedVal[k + 1] = highlyRelatedVal[k];
+        }
+        pHighlyRelatedWords[j] = &dataManager->data[i];
+        highlyRelatedVal[j] = nowVal;
+    }
+
+    printf("        word        | cos of angular distance\n");
+    for(i = 0; i < printNum; i++) {
+        printf("%-20s |        %.10lf\n", pHighlyRelatedWords[i]->wordStr, highlyRelatedVal[i]);
+    }
+
+    free(pHighlyRelatedWords);
+    free(highlyRelatedVal);
+
+	getch();
+}
+
 
 DataManager* import_data(const char* filename)
 {

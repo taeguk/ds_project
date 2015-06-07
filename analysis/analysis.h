@@ -76,6 +76,7 @@ typedef struct _WordManager {
 	int axisNum;
 	WordIdx *wordIdxTable;
 	AxisIdx *axisIdxTable;		// axisIdxTable[0] is junk.
+	Word* *ptrAxis;	// array of pointers of axis word data.
 } WordManager;
 
 /*
