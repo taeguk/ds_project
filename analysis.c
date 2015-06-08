@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 
 WordManager* init_analysis(const char* filename)
 {
-	FILE * fp = fopen(filename, "r");
+	FILE * fp = fopen_wrap(filename, "r");
 	WordManager *wordManager;
 	time_t start, end;
 	int i,j;
@@ -325,7 +325,7 @@ void calculate_vector(WordManager *wordManager, const char *fileName)
 	end = clock();
 	fprintf(stdout, "\t\t\t[T] initializing vectors : %lf sec\n", (double)(end-start)/CLOCKS_PER_SEC);
 
-	fp = fopen(fileName, "r");
+	fp = fopen_wrap(fileName, "r");
 	init_rqueue(rqueue);
 	for( ; ; ) {
 		read_word_from_file(fp, wordStr);
@@ -461,7 +461,7 @@ void read_word_from_file(FILE *fp, char *wordStr)
 
 void export_result(const WordManager *wordManager, const char* filename)
 {
-	FILE * fp = fopen(filename, "wb");
+	FILE * fp = fopen_wrap(filename, "wb");
 	int mws = MAX_WORD_SIZE;
 	int i;
 
@@ -529,4 +529,14 @@ void* realloc_wrap(void* ptr, size_t size)
 		exit(1);
 	}
 	return ret;
+}
+
+FILE* fopen_wrap(const char *filename, const char *mode)
+{
+	FILE* fp;
+	if((fp=fopen(filename, mode)) == NULL) {
+		fprintf(stderr, "[Error] fopen(\"%s\",\"%s\") error \n", filename, mode);
+		exit(1);
+	}
+	return fp;
 }

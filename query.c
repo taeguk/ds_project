@@ -266,7 +266,7 @@ void get_related_words_menu(DataManager* dataManager)
 
 DataManager* import_data(const char* filename)
 {
-	FILE * fp = fopen(filename, "rb");
+	FILE * fp = fopen_wrap(filename, "rb");
 	DataManager *dataManager;
 	int i;
 
@@ -408,6 +408,16 @@ void* realloc_wrap(void* ptr, size_t size)
 		exit(1);
 	}
 	return ret;
+}
+
+FILE* fopen_wrap(const char *filename, const char *mode)
+{
+	FILE* fp;
+	if((fp=fopen(filename, mode)) == NULL) {
+		fprintf(stderr, "[Error] fopen(\"%s\",\"%s\") error \n", filename, mode);
+		exit(1);
+	}
+	return fp;
 }
 
 int getch(void)
