@@ -189,9 +189,10 @@ void free_dataManager(DataManager *dataManager);
 void* malloc_wrap(size_t size);
 void* calloc_wrap(size_t num, size_t size);
 void* realloc_wrap(void* ptr, size_t size);
+
+FILE* fopen_wrap(const char *filename, const char *mode);
  
 int getch(void);
 inline void flush_stdin(void);
-
 
 #endif
