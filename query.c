@@ -5,7 +5,7 @@ int main(int argc, char *argv[])
 	DataManager* dataManager;
 
 	if(argc != 2) {
-		fprintf(stderr, "[Usage] %s <INPUT_FILE> \n", argv[0]);
+		fprintf(stderr, "[Usage] %s <DATA_FILE> \n", argv[0]);
 		return 1;
 	}
 
