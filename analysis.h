@@ -8,6 +8,7 @@
 #include <time.h>
 
 #define SIMULATION_NUM	10000
+#define SKIP_RATE		0.005
 
 #define MAX_WORD_SIZE	100
 
