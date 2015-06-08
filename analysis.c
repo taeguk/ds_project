@@ -87,7 +87,7 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename)
 	WordVec *rate;
 	time_t start, end;
 
-	int sampleNum, gap;
+	int sampleNum;
 	int i,j,p,c,tmp;
 
 	/* 
@@ -142,18 +142,8 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename)
 	end = clock();
 	fprintf(stdout, "\t\t\t[T] sorting all words : %lf sec\n", (double)(end-start)/CLOCKS_PER_SEC);
 	
-	// calculate a index gap.
-/*	
-	gap = (wordManager->wordNum/2) / SIMULATION_NUM;
-	if(gap == 0) {
-		gap = 1;
-		sampleNum = wordManager->wordNum;
-	} else {
-		sampleNum = SIMULATION_NUM;
-	}
-*/
-	if(wordManager->wordNum/24 < SIMULATION_NUM) {
-		sampleNum = wordManager->wordNum/24 + 1;
+	if(wordManager->wordNum/16 < SIMULATION_NUM) {
+		sampleNum = wordManager->wordNum/16 + 1;
 	} else {
 		sampleNum = SIMULATION_NUM;
 	}
@@ -171,8 +161,7 @@ void create_axisIdxTable(WordManager *wordManager, const char* filename)
 
 	// select sample words.
 	fprintf(stdout, "\t\t\t[*] select sample words in sorted words\n");
-	for(i=1,j=wordManager->wordNum*0.005+1; i <= sampleManager->wordNum; ++i,j++) {
-		//fprintf(stderr, "#%d, cnt = %u\n", j, wordManager->word[sortedWordIdx[j]].wordCnt);
+	for(i=1,j=wordManager->wordNum * SKIP_RATE + 1; i <= sampleManager->wordNum; ++i,++j) {
 		HashIdx hashIdx;
 		sampleManager->word[i] = wordManager->word[sortedWordIdx[j]];
 		sampleManager->word[i].wordVec = (WordVec*) malloc_wrap((sampleManager->axisNum+1) * sizeof(WordVec));
