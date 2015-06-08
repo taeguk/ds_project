@@ -7,13 +7,13 @@
 #include <stdbool.h>
 #include <time.h>
 
-#define SIMULATION_NUM	10000
+#define SIMULATION_NUM	40000
 
 #define MAX_WORD_SIZE	100
 
 #define MAX_HASH_SIZE	(MAX_WORD_NUM * 20)
 #define MAX_WORD_NUM	500000
-#define AXIS_NUM		200
+//#define AXIS_NUM		200
 
 #define RELATION_QUEUE_SIZE (10 * 2 + 1)
 
