@@ -7,6 +7,8 @@
 #include <stdbool.h>
 #include <time.h>
 
+// experiment
+
 #define SIMULATION_NUM	40000
 
 #define MAX_WORD_SIZE	100
